@@ -1,0 +1,1609 @@
+import { ComboBox, LineEdit } from "std-widgets.slint";
+
+export struct EqBandView {
+    frequency: int,
+    gain: float,
+    q: float,
+    filter: int,
+    plot-x: float,
+    plot-y: float,
+}
+
+// Neutral graphite palette with a single accent. Colour is reserved for state:
+// accent = selected/active, red = muted/destructive, green = connected, amber = warning.
+global Theme {
+    out property <color> bg: #131417;
+    out property <color> sidebar: #0f1012;
+    out property <color> panel: #1a1b1f;
+    out property <color> control: #23252a;
+    out property <color> hover: #2b2d33;
+    out property <color> line: #26282d;
+    out property <color> line-strong: #363840;
+    out property <color> text: #ececef;
+    out property <color> text-2: #a4a6ae;
+    out property <color> text-3: #6f717a;
+    out property <color> accent: #8b7cf8;
+    out property <color> accent-dim: #8b7cf822;
+    out property <color> red: #e5484d;
+    out property <color> green: #3dd68c;
+    out property <color> amber: #f5a524;
+    out property <string> display: "Segoe UI Variable Display";
+    out property <length> radius: 8px;
+}
+
+global Icons {
+    out property <string> mic: "M12 3 A3 3 0 0 1 15 6 L15 12 A3 3 0 0 1 9 12 L9 6 A3 3 0 0 1 12 3 Z M5 11 A7 7 0 0 0 19 11 M12 18 L12 21";
+    out property <string> mic-off: "M12 3 A3 3 0 0 1 15 6 L15 12 A3 3 0 0 1 9 12 L9 6 A3 3 0 0 1 12 3 Z M5 11 A7 7 0 0 0 19 11 M12 18 L12 21 M3 3 L21 21";
+    out property <string> mixer: "M6 4 L6 20 M12 4 L12 20 M18 4 L18 20 M4 15 L8 15 M10 8 L14 8 M16 12 L20 12";
+    out property <string> eq: "M3 15 C6 15 7 7 10 7 C13 7 13 17 16 17 C19 17 19 11 21 11";
+    out property <string> sun: "M8.5 12 A3.5 3.5 0 1 0 15.5 12 A3.5 3.5 0 1 0 8.5 12 Z M12 3 L12 5 M12 19 L12 21 M3 12 L5 12 M19 12 L21 12 M5.6 5.6 L7 7 M17 17 L18.4 18.4 M5.6 18.4 L7 17 M17 7 L18.4 5.6";
+    out property <string> gear: "M 18.97 9.84 L 21.36 10.39 L 21.36 13.61 L 18.97 14.16 L 18.46 15.41 L 19.76 17.48 L 17.48 19.76 L 15.41 18.46 L 14.16 18.97 L 13.61 21.36 L 10.39 21.36 L 9.84 18.97 L 8.59 18.46 L 6.52 19.76 L 4.24 17.48 L 5.54 15.41 L 5.03 14.16 L 2.64 13.61 L 2.64 10.39 L 5.03 9.84 L 5.54 8.59 L 4.24 6.52 L 6.52 4.24 L 8.59 5.54 L 9.84 5.03 L 10.39 2.64 L 13.61 2.64 L 14.16 5.03 L 15.41 5.54 L 17.48 4.24 L 19.76 6.52 L 18.46 8.59 Z M 9 12 A 3 3 0 1 0 15 12 A 3 3 0 1 0 9 12 Z";
+    out property <string> sidebar-collapse: "M4 5 L20 5 L20 19 L4 19 Z M9 5 L9 19 M15.5 9.5 L13 12 L15.5 14.5";
+    out property <string> sidebar-expand: "M4 5 L20 5 L20 19 L4 19 Z M9 5 L9 19 M13 9.5 L15.5 12 L13 14.5";
+    out property <string> lock: "M6 11 L18 11 L18 20 L6 20 Z M8.5 11 L8.5 8 A3.5 3.5 0 0 1 15.5 8 L15.5 11";
+    out property <string> unlock: "M6 11 L18 11 L18 20 L6 20 Z M8.5 11 L8.5 8 A3.5 3.5 0 0 1 15.2 6.5";
+    out property <string> plus: "M12 6 L12 18 M6 12 L18 12";
+    out property <string> trash: "M5 7 L19 7 M10 7 L10 4.5 L14 4.5 L14 7 M7 7 L8 19.5 L16 19.5 L17 7";
+    out property <string> import: "M12 4 L12 15 M8 11 L12 15 L16 11 M5 19 L19 19";
+    out property <string> export: "M12 15 L12 4 M8 8 L12 4 L16 8 M5 19 L19 19";
+    out property <string> alert: "M12 8 L12 13 M12 16 L12 16.5 M3.5 12 A8.5 8.5 0 1 0 20.5 12 A8.5 8.5 0 1 0 3.5 12 Z";
+    out property <string> close: "M7 7 L17 17 M17 7 L7 17";
+    out property <string> check: "M6 12.5 L10 16.5 L18 8";
+}
+
+component Icon inherits Path {
+    viewbox-width: 24;
+    viewbox-height: 24;
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.6px;
+    fill: transparent;
+}
+
+component Panel inherits Rectangle {
+    background: Theme.panel;
+    border-radius: Theme.radius;
+    border-width: 1px;
+    border-color: Theme.line;
+}
+
+component SectionLabel inherits Text {
+    color: Theme.text-3;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+}
+
+component Divider inherits Rectangle {
+    height: 1px;
+    background: Theme.line;
+}
+
+component Switch inherits Rectangle {
+    in-out property <bool> checked;
+    in property <bool> enabled: true;
+    callback toggled(bool);
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: root.checked ? Theme.accent : #3a3c44;
+    opacity: root.enabled ? 1 : 0.4;
+    animate background { duration: 120ms; }
+    Rectangle {
+        y: 2px;
+        x: root.checked ? root.width - self.width - 2px : 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: #ffffff;
+        animate x { duration: 120ms; easing: ease-out; }
+    }
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+component CheckBox inherits HorizontalLayout {
+    in-out property <bool> checked;
+    in property <string> text;
+    spacing: 8px;
+    Rectangle {
+        width: 16px;
+        Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            background: root.checked ? Theme.accent : transparent;
+            border-width: root.checked ? 0 : 1px;
+            border-color: Theme.line-strong;
+            if root.checked : Icon { x: 1px; y: 1px; width: 14px; height: 14px; stroke-width: 2px; commands: Icons.check; stroke: #ffffff; }
+        }
+    }
+    Text { text: root.text; color: Theme.text-2; font-size: 13px; vertical-alignment: center; }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.checked = !root.checked; }
+    }
+}
+
+component Button inherits Rectangle {
+    in property <string> text;
+    in property <string> icon: "";
+    // "default" | "primary" | "danger"
+    in property <string> kind: "default";
+    in property <bool> enabled: true;
+    callback clicked;
+    property <color> fg: root.kind == "primary" ? #ffffff : root.kind == "danger" ? Theme.red : Theme.text;
+    height: 32px;
+    border-radius: 6px;
+    background: root.kind == "primary" ? (ta.has-hover && root.enabled ? #9a8dfa : Theme.accent)
+        : root.kind == "danger" ? (ta.has-hover && root.enabled ? #e5484d1f : transparent)
+        : (ta.has-hover && root.enabled ? Theme.hover : Theme.control);
+    border-width: 1px;
+    border-color: root.kind == "primary" ? transparent : root.kind == "danger" ? #e5484d66 : Theme.line-strong;
+    opacity: root.enabled ? 1 : 0.4;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 6px;
+        alignment: center;
+        if root.icon != "" : Rectangle {
+            width: 16px;
+            Icon { y: (parent.height - self.height) / 2; width: 16px; height: 16px; commands: root.icon; stroke: root.fg; }
+        }
+        Text { text: root.text; color: root.fg; font-size: 13px; font-weight: 600; vertical-alignment: center; }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component Segmented inherits Rectangle {
+    in property <[string]> items;
+    in property <int> index;
+    in property <bool> enabled: true;
+    callback selected(int);
+    property <length> seg-w: (self.width - 4px) / root.items.length;
+    height: 32px;
+    border-radius: 6px;
+    background: Theme.control;
+    border-width: 1px;
+    border-color: Theme.line-strong;
+    opacity: root.enabled ? 1 : 0.4;
+    Rectangle {
+        x: 2px + root.index * root.seg-w;
+        y: 2px;
+        width: root.seg-w;
+        height: parent.height - 4px;
+        border-radius: 4px;
+        background: #3a3c45;
+        animate x { duration: 120ms; easing: ease-out; }
+    }
+    for item[i] in root.items : Rectangle {
+        x: 2px + i * root.seg-w;
+        y: 2px;
+        width: root.seg-w;
+        height: parent.height - 4px;
+        Text {
+            width: parent.width;
+            height: parent.height;
+            text: item;
+            color: i == root.index ? Theme.text : Theme.text-2;
+            font-size: 13px;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: pointer;
+            clicked => { root.selected(i); }
+        }
+    }
+}
+
+// Option button used for voice effects and light patterns.
+component Choice inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    in property <bool> enabled: true;
+    callback clicked;
+    height: 36px;
+    border-radius: 6px;
+    background: root.selected ? Theme.accent-dim : ta.has-hover && root.enabled ? Theme.hover : Theme.control;
+    border-width: 1px;
+    border-color: root.selected ? Theme.accent : Theme.line-strong;
+    opacity: root.enabled ? 1 : 0.4;
+    Text {
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        color: root.selected ? Theme.text : Theme.text-2;
+        font-size: 13px;
+        font-weight: root.selected ? 600 : 400;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component ChoiceGrid inherits Rectangle {
+    in property <[string]> items;
+    in property <int> columns;
+    in property <int> selected-index;
+    in property <bool> enabled: true;
+    callback picked(int);
+    property <length> gap: 8px;
+    property <length> cell-w: (self.width - (root.columns - 1) * root.gap) / root.columns;
+    property <int> rows: Math.ceil(root.items.length / root.columns);
+    height: root.rows * 36px + (root.rows - 1) * root.gap;
+    for item[i] in root.items : Choice {
+        x: Math.mod(i, root.columns) * (root.cell-w + root.gap);
+        y: Math.floor(i / root.columns) * (36px + root.gap);
+        width: root.cell-w;
+        text: item;
+        selected: i == root.selected-index;
+        enabled: root.enabled;
+        clicked => { root.picked(i); }
+    }
+}
+
+// Setting row: title + description on the left, a control on the right.
+component SettingRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description: "";
+    padding-top: 12px;
+    padding-bottom: 12px;
+    spacing: 16px;
+    VerticalLayout {
+        horizontal-stretch: 1;
+        alignment: center;
+        spacing: 2px;
+        Text { text: root.title; color: Theme.text; font-size: 13px; font-weight: 600; }
+        if root.description != "" : Text { text: root.description; color: Theme.text-3; font-size: 12px; wrap: word-wrap; }
+    }
+    @children
+}
+
+// Horizontal slider over a colour track (hue, saturation, brightness).
+component ColorSlider inherits Rectangle {
+    in property <float> value;
+    in property <brush> track;
+    in property <color> knob-color;
+    in property <bool> enabled: true;
+    callback moved(float);
+    height: 20px;
+    opacity: root.enabled ? 1 : 0.4;
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 10px;
+        border-radius: 5px;
+        background: root.track;
+        border-width: 1px;
+        border-color: #ffffff14;
+    }
+    Rectangle {
+        x: Math.clamp(root.value, 0, 1) * (parent.width - self.width);
+        y: 1px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: root.knob-color;
+        border-width: 2px;
+        border-color: #ffffff;
+    }
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.moved(Math.clamp((self.mouse-x - 9px) / (self.width - 18px), 0, 1));
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.moved(Math.clamp((self.mouse-x - 9px) / (self.width - 18px), 0, 1));
+            }
+        }
+    }
+}
+
+// Palette plus hue / saturation / brightness sliders.
+component ColorPicker inherits VerticalLayout {
+    in-out property <float> hue;
+    in-out property <float> sat;
+    in-out property <float> value;
+    in property <bool> enabled: true;
+    callback changed();
+    property <color> current: hsv(root.hue, root.sat, root.value);
+    spacing: 14px;
+    HorizontalLayout {
+        spacing: 8px;
+        alignment: start;
+        for c in [
+            { h: 0.0, s: 0.0 }, { h: 0.0, s: 0.85 }, { h: 25.0, s: 0.9 }, { h: 50.0, s: 0.9 },
+            { h: 120.0, s: 0.8 }, { h: 185.0, s: 0.85 }, { h: 220.0, s: 0.85 }, { h: 265.0, s: 0.7 },
+            { h: 300.0, s: 0.75 }, { h: 330.0, s: 0.7 }
+        ] : Rectangle {
+            property <bool> current: Math.abs(root.hue - c.h) < 0.5 && Math.abs(root.sat - c.s) < 0.01;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: hsv(c.h, c.s, 1);
+            border-width: self.current ? 2px : 1px;
+            border-color: self.current ? #ffffff : #00000040;
+            opacity: root.enabled ? 1 : 0.4;
+            TouchArea {
+                enabled: root.enabled;
+                mouse-cursor: pointer;
+                clicked => {
+                    root.hue = c.h;
+                    root.sat = c.s;
+                    root.value = 1;
+                    root.changed();
+                }
+            }
+        }
+    }
+    HorizontalLayout {
+        spacing: 12px;
+        Text { width: 96px; text: "Оттенок"; color: Theme.text-2; font-size: 13px; vertical-alignment: center; }
+        ColorSlider {
+            horizontal-stretch: 1;
+            value: root.hue / 360;
+            knob-color: hsv(root.hue, 1, 1);
+            track: @linear-gradient(90deg, #ff0000 0%, #ffff00 16.6%, #00ff00 33.3%, #00ffff 50%, #0000ff 66.6%, #ff00ff 83.3%, #ff0000 100%);
+            enabled: root.enabled;
+            moved(v) => {
+                root.hue = v * 360;
+                if (root.sat < 0.05) {
+                    root.sat = 0.8;
+                }
+                root.changed();
+            }
+        }
+        Text { width: 44px; text: Math.round(root.hue) + "°"; color: Theme.text-3; font-size: 12px; horizontal-alignment: right; vertical-alignment: center; }
+    }
+    HorizontalLayout {
+        spacing: 12px;
+        Text { width: 96px; text: "Насыщенность"; color: Theme.text-2; font-size: 13px; vertical-alignment: center; }
+        ColorSlider {
+            horizontal-stretch: 1;
+            value: root.sat;
+            knob-color: root.current;
+            track: @linear-gradient(90deg, #ffffff 0%, hsv(root.hue, 1, 1) 100%);
+            enabled: root.enabled;
+            moved(v) => {
+                root.sat = v;
+                root.changed();
+            }
+        }
+        Text { width: 44px; text: Math.round(root.sat * 100) + "%"; color: Theme.text-3; font-size: 12px; horizontal-alignment: right; vertical-alignment: center; }
+    }
+    HorizontalLayout {
+        spacing: 12px;
+        Text { width: 96px; text: "Яркость"; color: Theme.text-2; font-size: 13px; vertical-alignment: center; }
+        ColorSlider {
+            horizontal-stretch: 1;
+            value: root.value;
+            knob-color: root.current;
+            track: @linear-gradient(90deg, #000000 0%, hsv(root.hue, root.sat, 1) 100%);
+            enabled: root.enabled;
+            moved(v) => {
+                root.value = v;
+                root.changed();
+            }
+        }
+        Text { width: 44px; text: Math.round(root.value * 100) + "%"; color: Theme.text-3; font-size: 12px; horizontal-alignment: right; vertical-alignment: center; }
+    }
+}
+
+// Static diagram of the 12-LED ring for the current mode.
+component LedRing inherits Rectangle {
+    in property <int> mode;
+    in property <bool> per-led;
+    in property <int> anim-index;
+    in property <[color]> led-colors;
+    in property <color> primary;
+    in property <color> secondary;
+    in property <bool> paintable;
+    callback painted(int);
+    width: 160px;
+    height: 160px;
+    border-radius: 80px;
+    background: #0c0d0f;
+    border-width: 1px;
+    border-color: Theme.line-strong;
+
+    pure function dot-color(i: int) -> color {
+        if (root.mode == 1) {
+            return root.per-led ? root.led-colors[i] : root.primary;
+        }
+        if (root.anim-index == 0) {
+            return root.primary;
+        }
+        if (root.anim-index == 1) {
+            return hsv(i * 30, 1, 1);
+        }
+        if (root.anim-index == 2) {
+            return root.primary.mix(root.secondary, Math.abs(i / 6 - 1));
+        }
+        return i < 8 ? root.primary : root.primary.darker(0.8);
+    }
+
+    for i in 12 : Rectangle {
+        property <angle> a: i * 30deg - 90deg;
+        width: 22px;
+        height: 22px;
+        x: parent.width / 2 + 58px * Math.cos(self.a) - self.width / 2;
+        y: parent.height / 2 + 58px * Math.sin(self.a) - self.height / 2;
+        border-radius: 11px;
+        background: root.dot-color(i);
+        border-width: dot-ta.has-hover && root.paintable ? 2px : 1px;
+        border-color: dot-ta.has-hover && root.paintable ? #ffffff : #00000060;
+        dot-ta := TouchArea {
+            enabled: root.paintable;
+            mouse-cursor: root.paintable ? MouseCursor.pointer : MouseCursor.default;
+            clicked => { root.painted(i); }
+        }
+    }
+}
+
+// Horizontal LED-style level meter (0–1 maps to -60…0 dBFS).
+component LevelMeter inherits Rectangle {
+    in property <float> level;
+    in property <bool> active;
+    property <int> segments: 32;
+    height: 10px;
+    for i in root.segments : Rectangle {
+        property <float> pos: i / root.segments;
+        x: i * parent.width / root.segments;
+        width: parent.width / root.segments - 2px;
+        height: parent.height;
+        border-radius: 1px;
+        background: root.active && root.level > self.pos
+            ? (self.pos < 0.8 ? Theme.green : self.pos < 0.9 ? Theme.amber : Theme.red)
+            : #2a2c31;
+    }
+}
+
+// Vertical channel fader with a 0–100 % scale.
+component Fader inherits Rectangle {
+    in property <string> label;
+    in property <float> maximum: 100;
+    in-out property <float> value;
+    in property <bool> enabled: true;
+    callback changed(int);
+    property <length> track-top: 64px;
+    property <length> track-h: self.height - self.track-top - 8px;
+    property <length> thumb-h: 16px;
+    property <float> ratio: Math.clamp(root.value / root.maximum, 0, 1);
+    opacity: root.enabled ? 1 : 0.4;
+
+    function apply(py: length) {
+        let r = Math.clamp(1 - (py - root.track-top - root.thumb-h / 2) / (root.track-h - root.thumb-h), 0, 1);
+        let v = Math.round(r * root.maximum);
+        if (v != root.value) {
+            root.value = v;
+            root.changed(v);
+        }
+    }
+
+    function step(delta: int) {
+        let v = Math.clamp(Math.round(root.value) + delta, 0, root.maximum);
+        if (v != root.value) {
+            root.value = v;
+            root.changed(v);
+        }
+    }
+
+    SectionLabel {
+        y: 0;
+        height: 14px;
+        width: parent.width;
+        horizontal-alignment: center;
+        text: root.label;
+    }
+    Text {
+        y: 22px;
+        height: 30px;
+        width: parent.width;
+        horizontal-alignment: center;
+        text: Math.round(root.ratio * 100) + "%";
+        color: Theme.text;
+        font-size: 22px;
+        font-weight: 600;
+        font-family: Theme.display;
+    }
+    // Scale
+    for i in 5 : Text {
+        x: parent.width / 2 - 44px;
+        width: 24px;
+        y: root.track-top + root.thumb-h / 2 + i * (root.track-h - root.thumb-h) / 4 - 7px;
+        height: 14px;
+        text: 100 - i * 25;
+        color: Theme.text-3;
+        font-size: 10px;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+    for i in 5 : Rectangle {
+        x: parent.width / 2 - 16px;
+        y: root.track-top + root.thumb-h / 2 + i * (root.track-h - root.thumb-h) / 4;
+        width: 6px;
+        height: 1px;
+        background: Theme.line-strong;
+    }
+    // Track and fill
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: root.track-top;
+        width: 4px;
+        height: root.track-h;
+        border-radius: 2px;
+        background: #2e3036;
+    }
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        width: 4px;
+        y: root.track-top + (1 - root.ratio) * (root.track-h - root.thumb-h) + root.thumb-h / 2;
+        height: root.track-top + root.track-h - self.y;
+        border-radius: 2px;
+        background: Theme.accent;
+    }
+    // Thumb
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: root.track-top + (1 - root.ratio) * (root.track-h - root.thumb-h);
+        width: 30px;
+        height: root.thumb-h;
+        border-radius: 4px;
+        background: ta.pressed ? #ffffff : ta.has-hover ? #f0f0f3 : #d7d8dd;
+        Rectangle { x: 6px; y: (parent.height - 1px) / 2; width: parent.width - 12px; height: 1px; background: #00000059; }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.apply(self.mouse-y);
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.apply(self.mouse-y);
+            }
+        }
+        scroll-event(event) => {
+            if event.delta-y > 0 {
+                root.step(1);
+            } else if event.delta-y < 0 {
+                root.step(-1);
+            }
+            accept
+        }
+    }
+}
+
+component NavItem inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <bool> active;
+    in property <bool> collapsed;
+    callback clicked;
+    height: 36px;
+    border-radius: 6px;
+    background: root.active ? #22242a : ta.has-hover ? #1a1b1f : transparent;
+    Rectangle {
+        x: 0;
+        y: 10px;
+        width: 2px;
+        height: parent.height - 20px;
+        border-radius: 1px;
+        background: root.active ? Theme.accent : transparent;
+    }
+    Icon {
+        x: 12px;
+        y: (parent.height - self.height) / 2;
+        commands: root.icon;
+        stroke: root.active ? Theme.accent : Theme.text-2;
+    }
+    if !root.collapsed : Text {
+        x: 40px;
+        height: parent.height;
+        text: root.text;
+        color: root.active ? Theme.text : Theme.text-2;
+        font-size: 13px;
+        font-weight: root.active ? 600 : 400;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component PageHeader inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> subtitle;
+    spacing: 16px;
+    VerticalLayout {
+        horizontal-stretch: 1;
+        spacing: 2px;
+        Text { text: root.title; color: Theme.text; font-size: 22px; font-weight: 600; font-family: Theme.display; }
+        Text { text: root.subtitle; color: Theme.text-2; font-size: 13px; }
+    }
+    @children
+}
+
+component Field inherits VerticalLayout {
+    in property <string> label;
+    spacing: 6px;
+    Text { text: root.label; color: Theme.text-3; font-size: 12px; }
+    @children
+}
+
+component Dialog inherits Rectangle {
+    in property <length> dialog-width: 440px;
+    background: #000000a6;
+    TouchArea { }
+    Rectangle {
+        width: root.dialog-width;
+        height: content.preferred-height;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: 12px;
+        background: #1d1e23;
+        border-width: 1px;
+        border-color: Theme.line-strong;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: #00000080;
+        content := VerticalLayout {
+            padding: 20px;
+            spacing: 12px;
+            @children
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "FIFINE AM8 Pro Lite";
+    icon: @image-url("images/app-icon.png");
+    preferred-width: 1080px;
+    preferred-height: 720px;
+    min-width: 960px;
+    min-height: 660px;
+    background: Theme.bg;
+    default-font-family: "Segoe UI Variable Text";
+
+    in-out property <int> page: 0;
+    in-out property <string> device-status: "Проверка AM8 Pro…";
+    in-out property <bool> device-ready: false;
+    in-out property <bool> light-on: false;
+    in-out property <bool> noise-on: false;
+    in-out property <bool> mic-muted: false;
+    in-out property <int> light-pattern-index: 0;
+    in-out property <int> voice-index: 0;
+    in-out property <float> input-volume: 0;
+    in-out property <float> headphone-volume: 0;
+    in-out property <float> monitor-mix: 0;
+    in-out property <bool> confirm-reset: false;
+    in-out property <[EqBandView]> eq-bands: [];
+    in-out property <[string]> eq-preset-names: ["Device Default"];
+    in-out property <int> eq-channel-index: 1;
+    in-out property <int> eq-preset-index: 0;
+    in-out property <int> eq-selected-band: -1;
+    in-out property <bool> eq-locked: true;
+    in-out property <bool> eq-ready: false;
+    in-out property <string> error-message: "";
+    in-out property <string> eq-curve: "M 0 200 L 1000 200";
+    in-out property <string> selected-frequency: "";
+    in-out property <string> selected-q: "";
+    in-out property <string> selected-gain: "";
+    in-out property <int> selected-filter: 0;
+    // App settings
+    in-out property <bool> autostart: false;
+    in-out property <int> close-action: 0;
+    in-out property <bool> close-prompt: false;
+    callback setting-changed(string, int);
+    callback reset-confirmed();
+    callback eq-channel-changed(int);
+    callback eq-preset-changed(int);
+    callback eq-lock-changed(bool);
+    callback eq-field-changed(string, string);
+    callback eq-filter-changed(int);
+    callback eq-add-band();
+    callback eq-remove-band();
+    callback eq-reset();
+    callback eq-import();
+    callback eq-export();
+    callback eq-plot-pressed(float, float);
+    callback eq-plot-moved(float, float);
+    callback autostart-toggled(bool);
+    callback close-action-changed(int);
+    callback close-choice(bool /* to tray */, bool /* remember */);
+
+    property <bool> close-remember: false;
+    in-out property <bool> sidebar-collapsed: false;
+    // Lighting
+    // 0 built-in effect, 1 custom colour, 2 animation
+    in-out property <int> light-mode: 0;
+    in-out property <bool> per-led: false;
+    in-out property <[color]> led-colors: [];
+    in-out property <int> anim-index: 0;
+    in-out property <float> anim-speed: 1;
+    in-out property <float> second-hue: 190;
+    property <color> second-color: hsv(root.second-hue, 0.85, 1);
+    property <[string]> anim-names: ["Дыхание", "Радуга", "Градиент", "Голос"];
+    // Microphone level meter
+    in-out property <float> mic-level: 0;
+    in-out property <float> mic-level-db: -60;
+    in-out property <bool> level-active: false;
+    in-out property <float> custom-hue: 260;
+    in-out property <float> custom-sat: 0.65;
+    in-out property <float> custom-value: 1;
+    property <color> custom-color: hsv(root.custom-hue, root.custom-sat, root.custom-value);
+    in-out property <[string]> effect-names: ["Эффект 1", "Эффект 2", "Эффект 3", "Эффект 4", "Эффект 5", "Эффект 6", "Эффект 7", "Эффект 8", "Эффект 9", "Эффект 10", "Эффект 11", "Эффект 12", "Эффект 13", "Эффект 14", "Эффект 15"];
+    callback light-config-changed();
+    callback led-painted(int);
+    callback led-fill-all();
+    callback mute-state-changed(bool);
+    changed mic-muted => { root.mute-state-changed(root.mic-muted); }
+    callback effect-name-edited(int, string);
+    property <length> sidebar-width: root.sidebar-collapsed ? 56px : 212px;
+    callback sidebar-toggled(bool);
+    property <bool> band-editable: root.device-ready && !root.eq-locked && root.eq-selected-band >= 0;
+
+    HorizontalLayout {
+        // ───────── Sidebar ─────────
+        Rectangle {
+            width: root.sidebar-width;
+            animate width { duration: 140ms; easing: ease-out; }
+            background: Theme.sidebar;
+            clip: true;
+            Rectangle { x: parent.width - 1px; width: 1px; background: Theme.line; }
+            VerticalLayout {
+                padding: 10px;
+                padding-top: 10px;
+                spacing: 2px;
+                NavItem {
+                    text: "Свернуть панель";
+                    icon: root.sidebar-collapsed ? Icons.sidebar-expand : Icons.sidebar-collapse;
+                    collapsed: root.sidebar-collapsed;
+                    clicked => {
+                        root.sidebar-collapsed = !root.sidebar-collapsed;
+                        root.sidebar-toggled(root.sidebar-collapsed);
+                    }
+                }
+                Rectangle { height: 8px; }
+                NavItem { text: "Микшер"; icon: Icons.mixer; collapsed: root.sidebar-collapsed; active: root.page == 0; clicked => { root.page = 0; } }
+                NavItem { text: "Эквалайзер"; icon: Icons.eq; collapsed: root.sidebar-collapsed; active: root.page == 1; clicked => { root.page = 1; } }
+                NavItem { text: "Подсветка"; icon: Icons.sun; collapsed: root.sidebar-collapsed; active: root.page == 2; clicked => { root.page = 2; } }
+                Rectangle { }
+                NavItem { text: "Настройки"; icon: Icons.gear; collapsed: root.sidebar-collapsed; active: root.page == 3; clicked => { root.page = 3; } }
+                Rectangle { height: 8px; }
+                Divider { }
+                // Connection status; only the dot remains when collapsed.
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 8px;
+                    padding-top: 12px;
+                    padding-bottom: 6px;
+                    spacing: 10px;
+                    Rectangle {
+                        width: 8px;
+                        Rectangle {
+                            y: 5px;
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 4px;
+                            background: root.device-ready ? Theme.green : Theme.amber;
+                        }
+                    }
+                    if !root.sidebar-collapsed : VerticalLayout {
+                        spacing: 2px;
+                        Text { text: root.device-ready ? "Подключено" : "Нет связи"; color: Theme.text; font-size: 12px; font-weight: 600; }
+                        Text { text: root.device-status; color: Theme.text-3; font-size: 11px; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+
+        // ───────── Content ─────────
+        VerticalLayout {
+            horizontal-stretch: 1;
+            padding: 24px;
+            padding-top: 20px;
+            spacing: 16px;
+
+            if !root.device-ready : Rectangle {
+                border-radius: 6px;
+                background: #f5a52414;
+                border-width: 1px;
+                border-color: #f5a52455;
+                HorizontalLayout {
+                    padding: 10px;
+                    padding-left: 12px;
+                    spacing: 10px;
+                    Rectangle {
+                        width: 18px;
+                        Icon { y: (parent.height - self.height) / 2; commands: Icons.alert; stroke: Theme.amber; }
+                    }
+                    Text {
+                        horizontal-stretch: 1;
+                        text: "Микрофон не отвечает. Проверьте USB-подключение. fifine Genie должен быть установлен, запускать его не нужно.";
+                        color: Theme.text;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // ═════════ Mixer ═════════
+            if root.page == 0 : VerticalLayout {
+                spacing: 16px;
+                PageHeader { title: "Микшер"; subtitle: "Громкость, мониторинг и обработка голоса"; }
+
+                HorizontalLayout {
+                    spacing: 16px;
+                    vertical-stretch: 1;
+
+                    // Microphone panel
+                    Panel {
+                        width: 288px;
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 12px;
+                            SectionLabel { text: "МИКРОФОН"; }
+                            Rectangle {
+                                vertical-stretch: 1;
+                                min-height: 140px;
+                                border-radius: 6px;
+                                background: #15161a;
+                                Image {
+                                    x: (parent.width - self.width) / 2;
+                                    y: 8px;
+                                    width: parent.width - 32px;
+                                    height: parent.height - 16px;
+                                    source: @image-url("images/genie/am8pro.png");
+                                    image-fit: contain;
+                                    opacity: root.device-ready ? 1 : 0.35;
+                                }
+                            }
+                            VerticalLayout {
+                                spacing: 6px;
+                                vertical-stretch: 0;
+                                alignment: start;
+                                HorizontalLayout {
+                                    Text { text: "Уровень голоса"; color: Theme.text-2; font-size: 12px; horizontal-stretch: 1; }
+                                    Text {
+                                        text: !root.level-active ? "—" : root.mic-level-db <= -59.5 ? "−∞ дБ" : Math.round(root.mic-level-db) + " дБ";
+                                        color: root.mic-level-db > -6 && root.level-active ? Theme.red : Theme.text-3;
+                                        font-size: 12px;
+                                    }
+                                }
+                                LevelMeter { level: root.mic-level; active: root.level-active; }
+                            }
+                            // Mute
+                            Rectangle {
+                                height: 48px;
+                                border-radius: 6px;
+                                background: root.mic-muted ? (mute-ta.has-hover ? #e5484d33 : #e5484d26) : (mute-ta.has-hover ? Theme.hover : Theme.control);
+                                border-width: 1px;
+                                border-color: root.mic-muted ? Theme.red : Theme.line-strong;
+                                opacity: root.device-ready ? 1 : 0.4;
+                                HorizontalLayout {
+                                    padding-left: 14px;
+                                    padding-right: 14px;
+                                    spacing: 10px;
+                                    Rectangle {
+                                        width: 20px;
+                                        Icon {
+                                            y: (parent.height - self.height) / 2;
+                                            width: 20px;
+                                            height: 20px;
+                                            commands: root.mic-muted ? Icons.mic-off : Icons.mic;
+                                            stroke: root.mic-muted ? Theme.red : Theme.text;
+                                        }
+                                    }
+                                    Text {
+                                        horizontal-stretch: 1;
+                                        text: root.mic-muted ? "Микрофон выключен" : "Микрофон включён";
+                                        color: root.mic-muted ? #ff8f93 : Theme.text;
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                                mute-ta := TouchArea {
+                                    enabled: root.device-ready;
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        root.mic-muted = !root.mic-muted;
+                                        root.setting-changed("mic-mute", root.mic-muted ? 1 : 0);
+                                    }
+                                }
+                            }
+                            SettingRow {
+                                padding-top: 4px;
+                                padding-bottom: 0;
+                                title: "Шумоподавление";
+                                description: "Глушит фоновый шум";
+                                VerticalLayout {
+                                    alignment: center;
+                                    Switch {
+                                        checked <=> root.noise-on;
+                                        enabled: root.device-ready;
+                                        toggled(on) => { root.setting-changed("noise-switch", on ? 1 : 0); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Levels
+                    Panel {
+                        horizontal-stretch: 1;
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 12px;
+                            HorizontalLayout {
+                                SectionLabel { text: "УРОВНИ"; horizontal-stretch: 1; }
+                                Text { text: "Тяните ползунок или крутите колесо мыши"; color: Theme.text-3; font-size: 11px; }
+                            }
+                            HorizontalLayout {
+                                vertical-stretch: 1;
+                                Fader {
+                                    horizontal-stretch: 1;
+                                    label: "МИКРОФОН";
+                                    maximum: 27;
+                                    value <=> root.input-volume;
+                                    enabled: root.device-ready;
+                                    changed(v) => { root.setting-changed("input-volume", v); }
+                                }
+                                Rectangle { width: 1px; background: Theme.line; }
+                                Fader {
+                                    horizontal-stretch: 1;
+                                    label: "НАУШНИКИ";
+                                    maximum: 27;
+                                    value <=> root.headphone-volume;
+                                    enabled: root.device-ready;
+                                    changed(v) => { root.setting-changed("headphone-volume", v); }
+                                }
+                                Rectangle { width: 1px; background: Theme.line; }
+                                Fader {
+                                    horizontal-stretch: 1;
+                                    label: "МОНИТОРИНГ";
+                                    maximum: 24;
+                                    value <=> root.monitor-mix;
+                                    enabled: root.device-ready;
+                                    changed(v) => { root.setting-changed("monitor-mix", v); }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Voice effect
+                Panel {
+                    vertical-stretch: 0;
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 12px;
+                        HorizontalLayout {
+                            SectionLabel { text: "ЭФФЕКТ ГОЛОСА"; horizontal-stretch: 1; }
+                            Text {
+                                text: root.voice-index == 0 ? "Выключен" : "Активен";
+                                color: root.voice-index == 0 ? Theme.text-3 : Theme.accent;
+                                font-size: 11px;
+                                font-weight: 600;
+                            }
+                        }
+                        ChoiceGrid {
+                            columns: 8;
+                            items: ["Без эффекта", "Старик", "Монстр", "Робот", "Мегафон", "Ребёнок", "Женский", "Мужской"];
+                            selected-index: root.voice-index;
+                            enabled: root.device-ready;
+                            picked(i) => {
+                                root.voice-index = i;
+                                root.setting-changed("voice-changer", i == 0 ? 0 : i + 1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ═════════ Equalizer ═════════
+            if root.page == 1 : VerticalLayout {
+                spacing: 16px;
+                PageHeader {
+                    title: "Эквалайзер";
+                    subtitle: root.eq-channel-index == 1
+                        ? "Канал микрофона: обрабатывает ваш голос — так вас слышат другие"
+                        : "Канал наушников: меняет только то, что слышите вы";
+                    VerticalLayout {
+                        alignment: center;
+                        // Microphone first; channel index 1 is the microphone on the device.
+                        Segmented {
+                            width: 240px;
+                            items: ["Микрофон", "Наушники"];
+                            index: 1 - root.eq-channel-index;
+                            enabled: root.device-ready;
+                            selected(i) => { root.eq-channel-changed(1 - i); }
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        width: 200px;
+                        ComboBox {
+                            width: parent.width;
+                            y: (parent.height - self.height) / 2;
+                            model: root.eq-preset-names;
+                            current-index: root.eq-preset-index;
+                            enabled: root.eq-ready;
+                            selected(value) => { root.eq-preset-changed(self.current-index); }
+                        }
+                    }
+                    Button {
+                        text: root.eq-locked ? "Заблокировано" : "Редактирование";
+                        icon: root.eq-locked ? Icons.lock : Icons.unlock;
+                        kind: root.eq-locked ? "default" : "primary";
+                        clicked => { root.eq-lock-changed(!root.eq-locked); }
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                    Button { text: "Импорт"; icon: Icons.import; enabled: root.eq-ready && !root.eq-locked; clicked => { root.eq-import(); } }
+                    Button { text: "Экспорт"; icon: Icons.export; enabled: root.eq-ready; clicked => { root.eq-export(); } }
+                    Button { text: "Сбросить"; kind: "danger"; enabled: root.eq-ready; clicked => { root.eq-reset(); } }
+                }
+
+                Panel {
+                    vertical-stretch: 1;
+                    min-height: 260px;
+                    Rectangle {
+                        x: 16px;
+                        y: 16px;
+                        width: parent.width - 32px;
+                        height: parent.height - 32px;
+
+                        for db in [12, 6, 0, -6, -12] : Text {
+                            x: 0;
+                            width: 30px;
+                            y: Math.clamp((12 - db) / 24 * plot.height - 7px, 0, plot.height - 14px);
+                            height: 14px;
+                            text: (db > 0 ? "+" : "") + db;
+                            color: Theme.text-3;
+                            font-size: 10px;
+                            horizontal-alignment: right;
+                            vertical-alignment: center;
+                        }
+                        for f in [
+                            { r: 0.0, t: "20" }, { r: 0.2330, t: "100" }, { r: 0.3333, t: "200" }, { r: 0.4660, t: "500" },
+                            { r: 0.5663, t: "1k" }, { r: 0.6667, t: "2k" }, { r: 0.7993, t: "5k" }, { r: 0.8997, t: "10k" }, { r: 1.0, t: "20k" }
+                        ] : Text {
+                            x: plot.x + Math.clamp(f.r * plot.width - 20px, -4px, plot.width - 36px);
+                            y: plot.y + plot.height + 6px;
+                            width: 40px;
+                            text: f.t;
+                            color: Theme.text-3;
+                            font-size: 10px;
+                            horizontal-alignment: center;
+                        }
+
+                        plot := Rectangle {
+                            x: 40px;
+                            width: parent.width - 40px;
+                            height: parent.height - 22px;
+                            background: #151619;
+                            border-radius: 4px;
+
+                            for g in [
+                                { r: 0.1327, major: false }, { r: 0.2330, major: true }, { r: 0.3333, major: false }, { r: 0.4660, major: false },
+                                { r: 0.5663, major: true }, { r: 0.6667, major: false }, { r: 0.7993, major: false }, { r: 0.8997, major: true }
+                            ] : Rectangle {
+                                x: g.r * parent.width;
+                                width: 1px;
+                                height: parent.height;
+                                background: g.major ? #ffffff12 : #ffffff08;
+                            }
+                            for db in [6, 0, -6] : Rectangle {
+                                y: (12 - db) / 24 * parent.height;
+                                height: 1px;
+                                width: parent.width;
+                                background: db == 0 ? #ffffff26 : #ffffff08;
+                            }
+
+                            TouchArea {
+                                enabled: root.eq-ready;
+                                mouse-cursor: root.eq-locked ? MouseCursor.default : MouseCursor.crosshair;
+                                pointer-event(event) => {
+                                    if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                                        root.eq-plot-pressed(self.mouse-x / self.width, self.mouse-y / self.height);
+                                    }
+                                }
+                                moved => {
+                                    if self.pressed && !root.eq-locked {
+                                        root.eq-plot-moved(self.mouse-x / self.width, self.mouse-y / self.height);
+                                    }
+                                }
+                            }
+
+                            Path {
+                                width: parent.width;
+                                height: parent.height;
+                                viewbox-width: 1000;
+                                viewbox-height: 400;
+                                fit: fill;
+                                commands: root.eq-curve + " L 1000 200 L 0 200 Z";
+                                fill: #8b7cf81c;
+                            }
+                            Path {
+                                width: parent.width;
+                                height: parent.height;
+                                viewbox-width: 1000;
+                                viewbox-height: 400;
+                                fit: fill;
+                                commands: root.eq-curve;
+                                stroke: Theme.accent;
+                                stroke-width: 2px;
+                            }
+
+                            for band[i] in root.eq-bands : handle := Rectangle {
+                                property <bool> sel: i == root.eq-selected-band;
+                                width: 18px;
+                                height: 18px;
+                                x: band.plot-x * plot.width - 9px;
+                                y: band.plot-y * plot.height - 9px;
+                                border-radius: 9px;
+                                background: handle.sel ? #ffffff : #26272d;
+                                border-width: 2px;
+                                border-color: Theme.accent;
+                                Text {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    text: i + 1;
+                                    color: handle.sel ? #26272d : Theme.text;
+                                    font-size: 9px;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            if root.eq-locked && root.eq-ready : Text {
+                                x: parent.width - self.width - 10px;
+                                y: 8px;
+                                text: "Снимите блокировку, чтобы менять кривую";
+                                color: Theme.text-3;
+                                font-size: 11px;
+                            }
+                        }
+                    }
+                }
+
+                Panel {
+                    HorizontalLayout {
+                        padding: 12px;
+                        padding-left: 16px;
+                        spacing: 12px;
+                        VerticalLayout {
+                            width: 64px;
+                            alignment: center;
+                            spacing: 2px;
+                            Text { text: "ТОЧКА"; color: Theme.text-3; font-size: 11px; font-weight: 600; letter-spacing: 0.6px; }
+                            Text {
+                                text: root.eq-selected-band >= 0 ? "№ " + (root.eq-selected-band + 1) : "—";
+                                color: Theme.text;
+                                font-size: 18px;
+                                font-weight: 600;
+                            }
+                        }
+                        Field {
+                            label: "Частота, Гц";
+                            LineEdit { width: 110px; text: root.selected-frequency; placeholder-text: "20–20000"; enabled: root.band-editable; accepted(value) => { root.eq-field-changed("frequency", value); } }
+                        }
+                        Field {
+                            label: "Добротность Q";
+                            LineEdit { width: 90px; text: root.selected-q; placeholder-text: "0,5–10"; enabled: root.band-editable; accepted(value) => { root.eq-field-changed("q", value); } }
+                        }
+                        Field {
+                            label: "Усиление, дБ";
+                            LineEdit { width: 90px; text: root.selected-gain; placeholder-text: "±12"; enabled: root.band-editable; accepted(value) => { root.eq-field-changed("gain", value); } }
+                        }
+                        Field {
+                            label: "Тип фильтра";
+                            ComboBox {
+                                width: 150px;
+                                model: ["Колокол", "Низкая полка", "Высокая полка", "Фильтр НЧ", "Фильтр ВЧ"];
+                                current-index: root.selected-filter;
+                                enabled: root.band-editable;
+                                selected(value) => { root.eq-filter-changed(self.current-index); }
+                            }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        VerticalLayout {
+                            alignment: end;
+                            HorizontalLayout {
+                                spacing: 8px;
+                                Button { text: "Точка"; icon: Icons.plus; enabled: root.eq-ready && !root.eq-locked; clicked => { root.eq-add-band(); } }
+                                Button { icon: Icons.trash; text: "Удалить"; enabled: root.eq-ready && !root.eq-locked && root.eq-selected-band >= 0; clicked => { root.eq-remove-band(); } }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ═════════ Lighting ═════════
+            if root.page == 2 : VerticalLayout {
+                spacing: 16px;
+                alignment: start;
+                PageHeader { title: "Подсветка"; subtitle: "RGB-кольцо на корпусе микрофона"; }
+                Panel {
+                    VerticalLayout {
+                        padding: 16px;
+                        padding-top: 4px;
+                        spacing: 0;
+                        SettingRow {
+                            title: "RGB-подсветка";
+                            description: !root.light-on ? "Выключена"
+                                : root.light-mode == 1 ? (root.per-led ? "Включена · свой цвет по светодиодам" : "Включена · свой цвет")
+                                : root.light-mode == 2 ? "Включена · анимация «" + root.anim-names[root.anim-index] + "»"
+                                : "Включена · " + root.effect-names[root.light-pattern-index];
+                            VerticalLayout {
+                                alignment: center;
+                                Switch {
+                                    checked <=> root.light-on;
+                                    enabled: root.device-ready;
+                                    toggled(on) => { root.setting-changed("light-switch", on ? 1 : 0); }
+                                }
+                            }
+                        }
+                        Divider { }
+                        VerticalLayout {
+                            padding-top: 16px;
+                            spacing: 16px;
+                            HorizontalLayout {
+                                SectionLabel { text: "РЕЖИМ"; horizontal-stretch: 1; vertical-alignment: center; }
+                                Segmented {
+                                    width: 330px;
+                                    items: ["Эффекты", "Цвет", "Анимации"];
+                                    index: root.light-mode;
+                                    enabled: root.device-ready && root.light-on;
+                                    selected(i) => {
+                                        root.light-mode = i;
+                                        root.light-config-changed();
+                                    }
+                                }
+                            }
+
+                            // Built-in effects
+                            if root.light-mode == 0 : VerticalLayout {
+                                spacing: 12px;
+                                ChoiceGrid {
+                                    columns: 5;
+                                    items: root.effect-names;
+                                    selected-index: root.light-pattern-index;
+                                    enabled: root.device-ready && root.light-on;
+                                    picked(i) => {
+                                        root.light-pattern-index = i;
+                                        root.setting-changed("light-pattern", i + 1);
+                                    }
+                                }
+                                HorizontalLayout {
+                                    spacing: 12px;
+                                    Text {
+                                        text: "Название эффекта " + (root.light-pattern-index + 1);
+                                        color: Theme.text-2;
+                                        font-size: 13px;
+                                        vertical-alignment: center;
+                                    }
+                                    LineEdit {
+                                        width: 260px;
+                                        text: root.effect-names[root.light-pattern-index];
+                                        placeholder-text: "Например: Радуга по кругу";
+                                        edited(value) => { root.effect-name-edited(root.light-pattern-index, value); }
+                                    }
+                                    Rectangle { horizontal-stretch: 1; }
+                                }
+                                Text {
+                                    text: "Ни микрофон, ни fifine Genie не дают эффектам названий — у производителя это просто «Pattern 1–15». Включите эффект, посмотрите на кольцо и подпишите его: название сохранится.";
+                                    color: Theme.text-3;
+                                    font-size: 12px;
+                                    wrap: word-wrap;
+                                }
+                            }
+
+                            // Custom colour and animations
+                            if root.light-mode != 0 : HorizontalLayout {
+                                spacing: 24px;
+                                VerticalLayout {
+                                    spacing: 8px;
+                                    alignment: start;
+                                    LedRing {
+                                        mode: root.light-mode;
+                                        per-led: root.per-led;
+                                        anim-index: root.anim-index;
+                                        led-colors: root.led-colors;
+                                        primary: root.custom-color;
+                                        secondary: root.second-color;
+                                        paintable: root.light-mode == 1 && root.per-led && root.device-ready && root.light-on;
+                                        painted(i) => { root.led-painted(i); }
+                                    }
+                                    Text {
+                                        width: 160px;
+                                        horizontal-alignment: center;
+                                        text: root.light-mode == 1 && root.per-led ? "Нажимайте на точки, чтобы покрасить" : "Схема кольца";
+                                        color: Theme.text-3;
+                                        font-size: 11px;
+                                        wrap: word-wrap;
+                                    }
+                                }
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 14px;
+
+                                    if root.light-mode == 1 : HorizontalLayout {
+                                        spacing: 12px;
+                                        Text { width: 96px; text: "Раскраска"; color: Theme.text-2; font-size: 13px; vertical-alignment: center; }
+                                        Segmented {
+                                            width: 280px;
+                                            items: ["Один цвет", "По светодиодам"];
+                                            index: root.per-led ? 1 : 0;
+                                            enabled: root.device-ready && root.light-on;
+                                            selected(i) => {
+                                                root.per-led = i == 1;
+                                                root.light-config-changed();
+                                            }
+                                        }
+                                        Rectangle { horizontal-stretch: 1; }
+                                        if root.per-led : Button {
+                                            text: "Залить всё";
+                                            enabled: root.device-ready && root.light-on;
+                                            clicked => { root.led-fill-all(); }
+                                        }
+                                    }
+
+                                    if root.light-mode == 2 : VerticalLayout {
+                                        spacing: 14px;
+                                        ChoiceGrid {
+                                            columns: 4;
+                                            items: root.anim-names;
+                                            selected-index: root.anim-index;
+                                            enabled: root.device-ready && root.light-on;
+                                            picked(i) => {
+                                                root.anim-index = i;
+                                                root.light-config-changed();
+                                            }
+                                        }
+                                        Text {
+                                            text: root.anim-index == 0 ? "Кольцо плавно разгорается и гаснет выбранным цветом."
+                                                : root.anim-index == 1 ? "По кольцу бежит весь спектр цветов."
+                                                : root.anim-index == 2 ? "Два цвета перетекают друг в друга по кругу."
+                                                : "Кольцо работает как индикатор громкости: чем громче вы говорите, тем больше светодиодов горит. Пока анимация включена, Windows показывает, что микрофон используется.";
+                                            color: Theme.text-3;
+                                            font-size: 12px;
+                                            wrap: word-wrap;
+                                        }
+                                        if root.anim-index != 3 : HorizontalLayout {
+                                            spacing: 12px;
+                                            Text { width: 96px; text: "Скорость"; color: Theme.text-2; font-size: 13px; vertical-alignment: center; }
+                                            ColorSlider {
+                                                horizontal-stretch: 1;
+                                                value: (root.anim-speed - 0.2) / 2.8;
+                                                knob-color: #d7d8dd;
+                                                track: #2e3036;
+                                                enabled: root.device-ready && root.light-on;
+                                                moved(v) => {
+                                                    root.anim-speed = 0.2 + v * 2.8;
+                                                    root.light-config-changed();
+                                                }
+                                            }
+                                            Text { width: 44px; text: "×" + Math.round(root.anim-speed * 10) / 10; color: Theme.text-3; font-size: 12px; horizontal-alignment: right; vertical-alignment: center; }
+                                        }
+                                    }
+
+                                    // Rainbow uses no colour of its own.
+                                    if !(root.light-mode == 2 && root.anim-index == 1) : ColorPicker {
+                                        hue <=> root.custom-hue;
+                                        sat <=> root.custom-sat;
+                                        value <=> root.custom-value;
+                                        enabled: root.device-ready && root.light-on;
+                                        changed => { root.light-config-changed(); }
+                                    }
+                                    if root.light-mode == 2 && root.anim-index == 2 : HorizontalLayout {
+                                        spacing: 12px;
+                                        Text { width: 96px; text: "Второй цвет"; color: Theme.text-2; font-size: 13px; vertical-alignment: center; }
+                                        ColorSlider {
+                                            horizontal-stretch: 1;
+                                            value: root.second-hue / 360;
+                                            knob-color: root.second-color;
+                                            track: @linear-gradient(90deg, #ff0000 0%, #ffff00 16.6%, #00ff00 33.3%, #00ffff 50%, #0000ff 66.6%, #ff00ff 83.3%, #ff0000 100%);
+                                            enabled: root.device-ready && root.light-on;
+                                            moved(v) => {
+                                                root.second-hue = v * 360;
+                                                root.light-config-changed();
+                                            }
+                                        }
+                                        Text { width: 44px; text: Math.round(root.second-hue) + "°"; color: Theme.text-3; font-size: 12px; horizontal-alignment: right; vertical-alignment: center; }
+                                    }
+                                    Text {
+                                        text: "Свои цвета и анимации работают, пока программа запущена (можно свернуть в трей). Микрофон их не запоминает и после выхода вернётся к встроенному эффекту.";
+                                        color: Theme.text-3;
+                                        font-size: 12px;
+                                        wrap: word-wrap;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ═════════ Settings ═════════
+            if root.page == 3 : VerticalLayout {
+                spacing: 16px;
+                alignment: start;
+                PageHeader { title: "Настройки"; subtitle: "Поведение программы и обслуживание микрофона"; }
+                Panel {
+                    VerticalLayout {
+                        padding-left: 16px;
+                        padding-right: 16px;
+                        padding-top: 12px;
+                        padding-bottom: 4px;
+                        SectionLabel { text: "ПРОГРАММА"; }
+                        SettingRow {
+                            title: "Запускать вместе с Windows";
+                            description: "Программа стартует свёрнутой в трей при входе в систему";
+                            VerticalLayout {
+                                alignment: center;
+                                Switch {
+                                    checked: root.autostart;
+                                    toggled(on) => { root.autostart-toggled(on); }
+                                }
+                            }
+                        }
+                        Divider { }
+                        SettingRow {
+                            title: "Кнопка закрытия окна";
+                            description: "Что делать, когда окно закрывают крестиком";
+                            VerticalLayout {
+                                alignment: center;
+                                ComboBox {
+                                    width: 220px;
+                                    model: ["Спрашивать", "Сворачивать в трей", "Закрывать программу"];
+                                    current-index: root.close-action;
+                                    selected(value) => {
+                                        root.close-action = self.current-index;
+                                        root.close-action-changed(self.current-index);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Panel {
+                    VerticalLayout {
+                        padding-left: 16px;
+                        padding-right: 16px;
+                        padding-top: 12px;
+                        padding-bottom: 4px;
+                        SectionLabel { text: "МИКРОФОН"; }
+                        SettingRow {
+                            title: "Сброс к заводским настройкам";
+                            description: "Громкость, подсветка, эффекты и эквалайзер вернутся к значениям по умолчанию";
+                            VerticalLayout {
+                                alignment: center;
+                                Button {
+                                    text: "Сбросить…";
+                                    kind: "danger";
+                                    enabled: root.device-ready;
+                                    clicked => { root.confirm-reset = true; }
+                                }
+                            }
+                        }
+                        Divider { }
+                        SettingRow {
+                            title: "Устройство";
+                            description: "FIFINE AM8 Pro · USB 3142:01A8";
+                            Text {
+                                text: root.device-ready ? "Подключено" : "Нет связи";
+                                color: root.device-ready ? Theme.green : Theme.amber;
+                                font-size: 12px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Error toast
+    if root.error-message != "" : Rectangle {
+        width: Math.min(560px, parent.width - root.sidebar-width - 48px);
+        height: 44px;
+        x: root.sidebar-width + (parent.width - root.sidebar-width - self.width) / 2;
+        y: parent.height - self.height - 20px;
+        border-radius: 8px;
+        background: #2a1719;
+        border-width: 1px;
+        border-color: #e5484d80;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 4px;
+            spacing: 10px;
+            Rectangle {
+                width: 18px;
+                Icon { y: (parent.height - self.height) / 2; commands: Icons.alert; stroke: Theme.red; }
+            }
+            Text { horizontal-stretch: 1; text: root.error-message; color: Theme.text; font-size: 13px; vertical-alignment: center; overflow: elide; }
+            Rectangle {
+                width: 36px;
+                Rectangle {
+                    y: (parent.height - self.height) / 2;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: close-ta.has-hover ? #ffffff14 : transparent;
+                    Icon { x: 8px; y: 8px; width: 16px; height: 16px; commands: Icons.close; stroke: Theme.text-2; }
+                    close-ta := TouchArea { mouse-cursor: pointer; clicked => { root.error-message = ""; } }
+                }
+            }
+        }
+    }
+
+    // Reset confirmation
+    if root.confirm-reset : Dialog {
+        Text { text: "Сбросить AM8 Pro?"; color: Theme.text; font-size: 16px; font-weight: 600; }
+        Text {
+            text: "Громкость, подсветка, эффекты и эквалайзер вернутся к заводским значениям. Отменить это нельзя.";
+            color: Theme.text-2;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            padding-top: 8px;
+            spacing: 8px;
+            alignment: end;
+            Button { text: "Отмена"; clicked => { root.confirm-reset = false; } }
+            Button { text: "Сбросить"; kind: "danger"; clicked => { root.confirm-reset = false; root.reset-confirmed(); } }
+        }
+    }
+
+    // Close prompt
+    if root.close-prompt : Dialog {
+        Text { text: "Закрыть окно"; color: Theme.text; font-size: 16px; font-weight: 600; }
+        Text {
+            text: "Свёрнутая в трей программа держит настройки под рукой: значок рядом с часами открывает окно, а правый клик — быстрое выключение микрофона.";
+            color: Theme.text-2;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        CheckBox { text: "Запомнить выбор"; checked <=> root.close-remember; }
+        HorizontalLayout {
+            padding-top: 8px;
+            spacing: 8px;
+            alignment: end;
+            Button { text: "Отмена"; clicked => { root.close-prompt = false; } }
+            Button { text: "Закрыть программу"; clicked => { root.close-choice(false, root.close-remember); } }
+            Button { text: "Свернуть в трей"; kind: "primary"; clicked => { root.close-choice(true, root.close-remember); } }
+        }
+    }
+}
