@@ -14,6 +14,12 @@ fn main() {
         // 1: app and tray icon, 2: tray icon while the microphone is muted.
         resource.set_icon("ui/images/app.ico");
         resource.set_icon_with_id("ui/images/app-muted.ico", "2");
+        // Shown in Explorer's file properties and in the Task Manager.
+        resource.set("ProductName", "FIFINE Lite");
+        resource.set("FileDescription", "FIFINE Lite");
+        resource.set("CompanyName", "Holorigg");
+        resource.set("LegalCopyright", "© 2026 Holorigg. GPL-3.0-only");
+        resource.set("OriginalFilename", "fifine-lite.exe");
         resource.compile().expect("embed Windows icon");
     }
 }

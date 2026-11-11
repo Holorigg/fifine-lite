@@ -57,19 +57,28 @@ fifine headsets and SC sound cards are not supported.
 
 ## Install
 
-There are no prebuilt downloads yet; build it from source.
+Download the latest version from **[Releases](https://github.com/Holorigg/fifine-lite/releases/latest)**:
+
+- **`FIFINE-Lite-x.y.z-setup-x64.exe`** – installer. Installs for the current user (no
+  administrator rights), adds a Start menu shortcut and an uninstaller, and can turn on
+  start with Windows.
+- **`FIFINE-Lite-x.y.z-portable-x64.zip`** – portable. Unzip anywhere and run
+  `fifine-lite.exe`.
+
+Windows 10 and 11 (64-bit) are supported. Settings are stored in
+`%APPDATA%\fifine-lite\settings.json` for both versions.
+
+The files are not code-signed, so Windows SmartScreen may warn about an unknown publisher
+on the first run: click **More info → Run anyway**. `SHA256SUMS.txt` in the release lists
+the checksums of the files.
+
+### Build from source
 
 1. Install [Rust](https://rustup.rs) (stable, MSVC toolchain).
-2. Build:
-
-   ```
-   cargo build --release
-   ```
-
-3. Run `target\release\fifine-lite.exe`. Copy it anywhere you like; it is a single file.
-
-Windows 10 and 11 are supported. Settings are stored in
-`%APPDATA%\fifine-lite\settings.json`.
+2. Run `cargo build --release`; the app is `target\release\fifine-lite.exe`.
+3. To make the installer and the portable zip as well, install
+   [Inno Setup 6](https://jrsoftware.org/isinfo.php) and run `scripts\release.ps1`.
+   The files appear in `dist\`.
 
 ## Good to know
 
