@@ -3,7 +3,7 @@ name = "fifine-am8-lite"
 version = "0.3.0"
 edition = "2024"
 description = "Lightweight control app for fifine USB microphones"
-license-file = "LICENSE"
+license = "GPL-3.0-only"
 repository = "https://github.com/Holorigg/fifine-am8-lite"
 publish = false
 

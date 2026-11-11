@@ -104,9 +104,12 @@ the device. No interface code has to change.
 
 ## License
 
-Source-available, **not** open source. You may use the app and build it for yourself.
-Copying, redistributing or reusing the code or parts of it in other projects requires the
-author's written permission. See [LICENSE](LICENSE).
+Copyright © 2026 Holorigg. Licensed under the
+[GNU General Public License v3.0](LICENSE) (GPL-3.0-only).
+
+You may use, study, change and share the app, including for money. Anything you
+distribute that is built on this code must also be released under GPL v3 with its full
+source code.
 
 The microphone picture and the equalizer presets come from fifine Genie and belong to
-fifine. "fifine" is a trademark of its owner.
+fifine; they are not covered by the GPL. "fifine" is a trademark of its owner.
