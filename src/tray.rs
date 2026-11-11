@@ -1,6 +1,6 @@
 //! Notification-area icon: click to open, menu to mute or quit.
 use crate::AppWindow;
-use fifine_am8_lite::i18n::tr;
+use fifine_lite::i18n::tr;
 use slint::{ComponentHandle, Weak};
 use tray_icon::{
     Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent,

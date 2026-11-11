@@ -1,5 +1,5 @@
 //! Diagnostic: opens the AM8 Pro capture for a few seconds and prints the peak level.
-use fifine_am8_lite::level::{Consumer, LevelMonitor};
+use fifine_lite::level::{Consumer, LevelMonitor};
 use std::{thread, time::Duration};
 
 fn main() {

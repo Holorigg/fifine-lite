@@ -1,6 +1,6 @@
 //! Read-only diagnostic: lists the supported microphones that are plugged in and prints
 //! what the first one reports.
-use fifine_am8_lite::{
+use fifine_lite::{
     device::{DeviceEvent, WriteCommand, spawn_device},
     level::LevelMonitor,
 };

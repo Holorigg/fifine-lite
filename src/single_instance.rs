@@ -21,10 +21,10 @@ mod imp {
         /// Returns `None` when another copy is already running (after asking it to show itself).
         pub fn acquire() -> Option<Self> {
             unsafe {
-                let mutex = CreateMutexW(std::ptr::null(), 0, wide("Local\\fifine-am8-lite-instance").as_ptr());
+                let mutex = CreateMutexW(std::ptr::null(), 0, wide("Local\\fifine-lite-instance").as_ptr());
                 let already = GetLastError() == ERROR_ALREADY_EXISTS;
                 // Auto-reset event the running copy polls.
-                let show_event = CreateEventW(std::ptr::null(), 0, 0, wide("Local\\fifine-am8-lite-show").as_ptr());
+                let show_event = CreateEventW(std::ptr::null(), 0, 0, wide("Local\\fifine-lite-show").as_ptr());
                 if already {
                     if !show_event.is_null() {
                         SetEvent(show_event);

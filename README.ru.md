@@ -60,11 +60,11 @@
    cargo build --release
    ```
 
-3. Запустите `target\release\fifine-am8-lite.exe`. Это один файл, его можно положить куда
+3. Запустите `target\release\fifine-lite.exe`. Это один файл, его можно положить куда
    угодно.
 
 Поддерживаются Windows 10 и 11. Настройки лежат в
-`%APPDATA%\fifine-am8-lite\settings.json`.
+`%APPDATA%\fifine-lite\settings.json`.
 
 ## Полезно знать
 

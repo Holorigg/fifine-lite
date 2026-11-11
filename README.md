@@ -60,10 +60,10 @@ There are no prebuilt downloads yet; build it from source.
    cargo build --release
    ```
 
-3. Run `target\release\fifine-am8-lite.exe`. Copy it anywhere you like; it is a single file.
+3. Run `target\release\fifine-lite.exe`. Copy it anywhere you like; it is a single file.
 
 Windows 10 and 11 are supported. Settings are stored in
-`%APPDATA%\fifine-am8-lite\settings.json`.
+`%APPDATA%\fifine-lite\settings.json`.
 
 ## Good to know
 

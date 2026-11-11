@@ -1,5 +1,5 @@
 //! App preferences stored in %APPDATA%, plus the Windows autostart entry.
-use fifine_am8_lite::profile::MAX_LEDS;
+use fifine_lite::profile::MAX_LEDS;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -63,7 +63,7 @@ impl Language {
 
     pub fn is_russian(self) -> bool {
         match self {
-            Language::Auto => fifine_am8_lite::i18n::system_is_russian(),
+            Language::Auto => fifine_lite::i18n::system_is_russian(),
             Language::English => false,
             Language::Russian => true,
         }
@@ -142,14 +142,25 @@ pub struct AppSettings {
     pub devices: BTreeMap<String, LightSettings>,
 }
 
+fn settings_dir(name: &str) -> Option<PathBuf> {
+    std::env::var_os("APPDATA").map(|dir| PathBuf::from(dir).join(name))
+}
+
 fn settings_path() -> Option<PathBuf> {
-    std::env::var_os("APPDATA").map(|dir| PathBuf::from(dir).join("fifine-am8-lite").join("settings.json"))
+    settings_dir("fifine-lite").map(|dir| dir.join("settings.json"))
+}
+
+/// Where versions before 0.3.1 (named "FIFINE AM8 Pro Lite") kept their settings.
+fn old_settings_path() -> Option<PathBuf> {
+    settings_dir("fifine-am8-lite").map(|dir| dir.join("settings.json"))
 }
 
 impl AppSettings {
     pub fn load() -> Self {
-        settings_path()
-            .and_then(|path| std::fs::read_to_string(path).ok())
+        [settings_path(), old_settings_path()]
+            .into_iter()
+            .flatten()
+            .find_map(|path| std::fs::read_to_string(path).ok())
             .and_then(|text| Self::parse(&text))
             .unwrap_or_default()
     }
@@ -198,7 +209,9 @@ mod autostart_impl {
     use winreg::{RegKey, enums::HKEY_CURRENT_USER};
 
     const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-    const VALUE: &str = "FIFINE AM8 Pro Lite";
+    const VALUE: &str = "FIFINE Lite";
+    /// Name of the autostart entry before the app was renamed.
+    const OLD_VALUE: &str = "FIFINE AM8 Pro Lite";
 
     fn command() -> Result<String, String> {
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
@@ -214,6 +227,18 @@ mod autostart_impl {
         };
         // Enabled only if it points at this executable.
         command().is_ok_and(|expected| value.eq_ignore_ascii_case(&expected))
+    }
+
+    /// Replaces an autostart entry left by a version with the old name, so the renamed
+    /// app keeps starting with Windows.
+    pub fn migrate() {
+        let Ok(key) = RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(RUN_KEY, winreg::enums::KEY_ALL_ACCESS)
+        else {
+            return;
+        };
+        if key.get_value::<String, _>(OLD_VALUE).is_ok() && set(true).is_ok() {
+            let _ = key.delete_value(OLD_VALUE);
+        }
     }
 
     pub fn set(enabled: bool) -> Result<(), String> {
@@ -239,9 +264,10 @@ mod autostart_impl {
     pub fn set(_: bool) -> Result<(), String> {
         Err("autostart is only supported on Windows".into())
     }
+    pub fn migrate() {}
 }
 
-pub use autostart_impl::{is_enabled as autostart_enabled, set as set_autostart};
+pub use autostart_impl::{is_enabled as autostart_enabled, migrate as migrate_autostart, set as set_autostart};
 
 #[cfg(test)]
 mod tests {

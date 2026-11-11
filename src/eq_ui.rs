@@ -1,5 +1,5 @@
 use super::{AppWindow, EqBandView};
-use fifine_am8_lite::{
+use fifine_lite::{
     device::WriteCommand,
     editor::EqEditor,
     eq::{curve_path, export_genie_json},

@@ -7,13 +7,13 @@ mod single_instance;
 mod tray;
 
 use app_settings::{AppSettings, CloseAction, Language, TRAY_FLAG};
-use fifine_am8_lite::device::{DeviceEvent, DeviceInfo, Problem, WriteCommand, spawn_device};
-use fifine_am8_lite::editor::EqEditor;
-use fifine_am8_lite::i18n::{self, tr};
-use fifine_am8_lite::level::{Consumer, LevelMonitor};
-use fifine_am8_lite::light::{LightMode, hsv_to_rgb};
-use fifine_am8_lite::profile::{self, MAX_LEDS, PROFILES, Profile};
-use fifine_am8_lite::protocol::{DeviceState, PATTERN_CUSTOM, Setting};
+use fifine_lite::device::{DeviceEvent, DeviceInfo, Problem, WriteCommand, spawn_device};
+use fifine_lite::editor::EqEditor;
+use fifine_lite::i18n::{self, tr};
+use fifine_lite::level::{Consumer, LevelMonitor};
+use fifine_lite::light::{LightMode, hsv_to_rgb};
+use fifine_lite::profile::{self, MAX_LEDS, PROFILES, Profile};
+use fifine_lite::protocol::{DeviceState, PATTERN_CUSTOM, Setting};
 use slint::{CloseRequestResponse, ComponentHandle, Model, SharedString};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -362,13 +362,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let Some(instance) = single_instance::Instance::acquire() else {
         return Ok(());
     };
-    let preview = std::env::var_os("AM8_LITE_PREVIEW").is_some();
+    let preview = std::env::var_os("FIFINE_LITE_PREVIEW").is_some();
     PREVIEW.store(preview, Ordering::Relaxed);
     app_settings::READ_ONLY.store(preview, Ordering::Relaxed);
     let start_in_tray = std::env::args().any(|arg| arg == TRAY_FLAG);
     let mut settings = AppSettings::load();
-    // AM8_LITE_LANG=en|ru overrides the language for one run (handy for screenshots).
-    match std::env::var("AM8_LITE_LANG").as_deref() {
+    // FIFINE_LITE_LANG=en|ru overrides the language for one run (handy for screenshots).
+    match std::env::var("FIFINE_LITE_LANG").as_deref() {
         Ok("en") => settings.language = Language::English,
         Ok("ru") => settings.language = Language::Russian,
         _ => {}
@@ -522,6 +522,9 @@ fn wire_window_lifecycle(
         ui.set_sidebar_collapsed(settings.sidebar_collapsed);
         ui.set_language_index(settings.language.index());
     }
+    if !PREVIEW.load(Ordering::Relaxed) {
+        app_settings::migrate_autostart();
+    }
     ui.set_autostart(app_settings::autostart_enabled());
 
     let state = app.clone();
@@ -545,7 +548,10 @@ fn wire_window_lifecycle(
             let text = tr("Could not change autostart", "Не удалось изменить автозапуск");
             ui.set_error_message(format!("{text}: {error}").into());
         }
-        ui.set_autostart(app_settings::autostart_enabled());
+        if !PREVIEW.load(Ordering::Relaxed) {
+        app_settings::migrate_autostart();
+    }
+    ui.set_autostart(app_settings::autostart_enabled());
     });
 
     let state = app.clone();
@@ -638,11 +644,11 @@ fn wire_tick(app: &Rc<App>) -> slint::Timer {
     timer
 }
 
-/// Developer preview hook for screenshots. AM8_LITE_PREVIEW is one of page:N, close, reset,
+/// Developer preview hook for screenshots. FIFINE_LITE_PREVIEW is one of page:N, close, reset,
 /// collapsed, effects, color, anim, or model:<id> (lays the window out for that model as if
 /// it were connected). A preview never writes to the device or to the settings file.
 fn apply_preview(ui: &AppWindow, app: &Rc<App>) {
-    let Ok(preview) = std::env::var("AM8_LITE_PREVIEW") else { return };
+    let Ok(preview) = std::env::var("FIFINE_LITE_PREVIEW") else { return };
     match preview.as_str() {
         "close" => ui.set_close_prompt(true),
         "reset" => ui.set_confirm_reset(true),
