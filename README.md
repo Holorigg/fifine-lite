@@ -11,6 +11,12 @@ installed or running.
 
 > Unofficial project, not affiliated with or endorsed by fifine.
 
+![Mixer](docs/screenshots/mixer.png)
+
+| Equalizer | Lighting |
+|---|---|
+| ![Equalizer](docs/screenshots/equalizer.png) | ![Lighting](docs/screenshots/lighting.png) |
+
 ## Features
 
 - **Mixer** – microphone gain, headphone volume and monitor mix, mute, noise suppression,
