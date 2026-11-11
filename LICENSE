@@ -1,0 +1,67 @@
+FIFINE Lite Source-Available License, version 1.0
+
+Copyright (c) 2026 Holorigg. All rights reserved.
+
+This software is source-available. It is not open source. The source code is
+published so that it can be read, built and used, not so that it can be copied
+into other work.
+
+1. What you may do
+
+   Without asking, and free of charge, you may:
+
+   a. download the source code and build the software from it;
+   b. run the software, for private or commercial purposes;
+   c. read and study the source code;
+   d. change the source code on your own computer for your own use;
+   e. send your changes back to the author as a pull request or patch
+      (see section 3).
+
+2. What needs permission
+
+   Unless the author has given you written permission first, you may not:
+
+   a. distribute, publish, sublicense or sell the software, the source code or
+      any part of either, changed or unchanged, in source or compiled form;
+   b. copy the source code or any part of it into another program, library,
+      product or repository;
+   c. publish a changed version of the software or any work based on it;
+   d. remove or change this license or the copyright notices.
+
+   Using the hosting service's own features on the official repository, for
+   example viewing it or forking it there in order to prepare a pull request,
+   is allowed. Such a fork may not be used to distribute the software or to
+   develop a separate product.
+
+   To ask for permission, open an issue in the official repository:
+   https://github.com/Holorigg/fifine-am8-lite
+
+3. Contributions
+
+   If you send the author a change, you give the author a perpetual,
+   worldwide, royalty-free, irrevocable right to use, change, publish and
+   relicense it as part of this software. You confirm that you have the right
+   to give this.
+
+4. Third-party material
+
+   This license covers the author's own code only. Libraries the software is
+   built with keep their own licenses. The microphone image and the equalizer
+   presets included with the software come from fifine Genie and belong to
+   fifine; "fifine" is a trademark of its owner. This project is not
+   affiliated with or endorsed by fifine.
+
+5. Termination
+
+   If you break the terms of this license, the rights it gives you end
+   automatically.
+
+6. No warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   THE SOFTWARE SENDS COMMANDS TO HARDWARE; YOU USE IT AT YOUR OWN RISK.

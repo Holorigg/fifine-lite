@@ -1,69 +1,71 @@
+//! Wire format shared by fifine's `A5 5A FE` microphones. Which codes and report offsets a
+//! given model uses is described by its [`Profile`](crate::profile::Profile).
+use crate::profile::{Codes, Field, Layout, MAX_LEDS};
 use serde::{Deserialize, Serialize};
 
-pub const VENDOR_ID: u16 = 0x3142;
-pub const PRODUCT_ID: u16 = 0x01a8;
-pub const USAGE_PAGE: u16 = 0xff00;
-pub const USAGE: u16 = 0x55aa;
-
-#[derive(Debug, Clone, Copy)]
+/// A setting the app can change. Models support different subsets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Setting {
     LightSwitch,
-    NoiseSwitch,
-    MicMute,
-    VoiceChanger,
-    RealTimeSwitch,
     LightPattern,
+    Mute,
+    Noise,
+    Voice,
     InputVolume,
     HeadphoneVolume,
     MonitorMix,
-    VolumeMode,
-    Reset,
+    Pickup,
+    LowCut,
+    MidBoost,
 }
 
 impl Setting {
-    fn code(self) -> Option<u8> {
+    /// Command code of this setting on a given model.
+    pub fn code(self, codes: &Codes) -> Option<u8> {
         match self {
-            Setting::LightSwitch => Some(0x11),
-            Setting::NoiseSwitch => Some(0x02),
-            Setting::MicMute => Some(0x01),
-            Setting::VoiceChanger => Some(0x04),
-            Setting::RealTimeSwitch => Some(0x05),
-            Setting::LightPattern => Some(0x00),
-            Setting::InputVolume => Some(0x0d),
-            Setting::HeadphoneVolume => Some(0x0e),
-            Setting::MonitorMix => Some(0x0f),
-            Setting::VolumeMode => Some(0x0c),
-            Setting::Reset => None,
+            Setting::LightSwitch => codes.light_switch,
+            Setting::LightPattern => codes.light_pattern,
+            Setting::Mute => codes.mute,
+            Setting::Noise => codes.noise,
+            Setting::Voice => codes.voice,
+            Setting::InputVolume => codes.input_volume,
+            Setting::HeadphoneVolume => codes.headphone_volume,
+            Setting::MonitorMix => codes.monitor_mix,
+            Setting::Pickup => codes.pickup,
+            Setting::LowCut => codes.low_cut,
+            Setting::MidBoost => codes.mid_boost,
         }
     }
 }
 
-/// Report ID precedes the payload, matching AM8Pro.js configData().
-pub fn setting_report(setting: Setting, value: u8) -> Vec<u8> {
-    match setting.code() {
-        Some(code) => vec![0, 0xa5, 0x5a, 0xfe, 0x02, code, value, 0x16],
-        None => vec![0, 0xa5, 0x5a, 0xfe, 0x01, 0x20, 0x16],
-    }
+/// Report ID precedes the payload, matching Genie's configData().
+pub fn setting_report(code: u8, value: u8) -> Vec<u8> {
+    vec![0, 0xa5, 0x5a, 0xfe, 0x02, code, value, 0x16]
 }
 
-/// Number of RGB LEDs in the AM8 Pro ring.
-pub const LED_COUNT: usize = 12;
+/// Factory reset.
+pub fn reset_report() -> Vec<u8> {
+    vec![0, 0xa5, 0x5a, 0xfe, 0x01, 0x20, 0x16]
+}
 
-/// One colour per LED, matching AM8Pro.js Render(): A5 5A FE 26 0B 0C, 12×RGB, 16.
+/// Asks the microphone to refresh its state report (report ID first).
+pub const QUERY_REPORT: [u8; 6] = [0, 0xa5, 0x5a, 0xfe, 0x00, 0x16];
+
+/// Light pattern the AM8 Pro reports while it shows colours sent by the computer.
+/// Lower numbers are built-in effects. Selecting 16 makes the last frame stick.
+pub const PATTERN_CUSTOM: u8 = 16;
+
+/// One colour per LED, matching Genie's Render(): A5 5A FE len 0B n, n×RGB, 16.
 /// Sent with report ID 0 and padded to the 256-byte transfer like the EQ report.
-pub fn frame_report(frame: &[[u8; 3]; LED_COUNT]) -> Vec<u8> {
-    let mut bytes = vec![0, 0xa5, 0x5a, 0xfe, 0x26, 0x0b, LED_COUNT as u8];
-    for rgb in frame {
+pub fn frame_report(frame: &[[u8; 3]; MAX_LEDS], leds: usize) -> Vec<u8> {
+    let leds = leds.min(MAX_LEDS);
+    let mut bytes = vec![0, 0xa5, 0x5a, 0xfe, (2 + 3 * leds) as u8, 0x0b, leds as u8];
+    for rgb in &frame[..leds] {
         bytes.extend_from_slice(rgb);
     }
     bytes.push(0x16);
     bytes.resize(257, 0);
     bytes
-}
-
-/// The same colour on every LED.
-pub fn color_report(rgb: [u8; 3]) -> Vec<u8> {
-    frame_report(&[rgb; LED_COUNT])
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -80,78 +82,83 @@ pub enum EqChannel {
     Microphone,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Configuration {
-    pub light_pattern: u8,
-    pub light_on: bool,
-    pub noise_reduction: bool,
-    pub mic_mute: bool,
-    pub voice_changer: u8,
-    pub input_volume: u8,
-    pub headphone_volume: u8,
-    pub monitor_mix: u8,
-}
-
-#[derive(Debug, Clone, PartialEq)]
+/// What a state report says. A value is `None` when the model has no such setting.
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct DeviceState {
-    pub configuration: Configuration,
-    pub channel: EqChannel,
-    pub eq_points: Vec<EqPoint>,
+    pub light_on: Option<bool>,
+    pub light_pattern: Option<u8>,
+    pub mic_mute: Option<bool>,
+    pub noise: Option<u8>,
+    pub voice: Option<u8>,
+    pub input_volume: Option<u8>,
+    pub headphone_volume: Option<u8>,
+    pub monitor_mix: Option<u8>,
+    pub pickup: Option<u8>,
+    pub low_cut: Option<bool>,
+    pub mid_boost: Option<bool>,
+    /// EQ of the channel this report carries; reports alternate between the two.
+    pub eq: Option<(EqChannel, Vec<EqPoint>)>,
 }
 
-/// Genie helper's `receivedFromGetInputReport` data starts at A5, without report ID.
-/// `led_count` inserts three bytes per LED before the EQ channel and filter data.
-pub fn parse_input_report(bytes: &[u8]) -> Result<DeviceState, &'static str> {
+/// Parses a state report starting at A5 (the report ID is already removed).
+/// LED colours (three bytes each) sit before the EQ channel and its ten bands.
+pub fn parse_input_report(bytes: &[u8], layout: &Layout, has_eq: bool) -> Result<DeviceState, &'static str> {
     if bytes.len() < 118 || bytes[..3] != [0xa5, 0x5a, 0xfe] {
-        return Err("invalid AM8 Pro report header or length");
+        return Err("invalid report header or length");
     }
-    let led_count = bytes[15] as usize;
-    let eq_channel_at = 16 + 3 * led_count;
+    let led_count = bytes[layout.led_count_at] as usize;
+    let eq_channel_at = layout.led_count_at + 1 + 3 * led_count;
     let eq_start = eq_channel_at + 1;
-    let light_switch_at = eq_start + 100;
-    if light_switch_at >= bytes.len() {
-        return Err("AM8 Pro report truncated after LED data");
+    if eq_start + 100 >= bytes.len() {
+        return Err("report truncated after LED data");
     }
-    let channel = match bytes[eq_channel_at] {
-        0 => EqChannel::Output,
-        1 => EqChannel::Microphone,
-        _ => return Err("unknown EQ channel in AM8 Pro report"),
+    let read = |field: Option<Field>| -> Option<u8> {
+        let index = match field? {
+            Field::At(index) => index,
+            Field::AfterEq(offset) => eq_start + 100 + offset - 1,
+            Field::AfterLeds(index) if led_count == 0 => index.checked_sub(3 * MAX_LEDS)?,
+            Field::AfterLeds(index) => index,
+        };
+        bytes.get(index).copied()
     };
-    let mut eq_points = Vec::new();
-    for offset in (eq_start..eq_start + 100).step_by(10) {
-        let band = &bytes[offset..offset + 10];
-        if band[0] == 0 {
-            continue;
+    let flag = |field| read(field).map(|value| value != 0);
+    let eq = if has_eq {
+        let channel = match bytes[eq_channel_at] {
+            0 => EqChannel::Output,
+            1 => EqChannel::Microphone,
+            _ => return Err("unknown EQ channel in report"),
+        };
+        let mut points = Vec::new();
+        for offset in (eq_start..eq_start + 100).step_by(10) {
+            let band = &bytes[offset..offset + 10];
+            if band[0] == 0 {
+                continue;
+            }
+            points.push(EqPoint {
+                filter_type: u16::from_le_bytes([band[2], band[3]]),
+                frequency_hz: u16::from_le_bytes([band[4], band[5]]),
+                q: f32::from(u16::from_le_bytes([band[6], band[7]])) / 1024.0,
+                gain_db: f32::from(i16::from_le_bytes([band[8], band[9]])) / 256.0,
+            });
         }
-        eq_points.push(EqPoint {
-            filter_type: u16::from_le_bytes([band[2], band[3]]),
-            frequency_hz: u16::from_le_bytes([band[4], band[5]]),
-            q: f32::from(u16::from_le_bytes([band[6], band[7]])) / 1024.0,
-            gain_db: f32::from(i16::from_le_bytes([band[8], band[9]])) / 256.0,
-        });
-    }
+        Some((channel, points))
+    } else {
+        None
+    };
     Ok(DeviceState {
-        configuration: Configuration {
-            light_pattern: bytes[4],
-            light_on: bytes[light_switch_at] != 0,
-            noise_reduction: bytes[8] != 0,
-            mic_mute: bytes[5] != 0,
-            voice_changer: bytes[9],
-            input_volume: bytes[12],
-            headphone_volume: bytes[13],
-            monitor_mix: bytes[14],
-        },
-        channel,
-        eq_points,
+        light_on: flag(layout.light_switch),
+        light_pattern: read(layout.light_pattern),
+        mic_mute: flag(layout.mute),
+        noise: read(layout.noise),
+        voice: read(layout.voice),
+        input_volume: read(layout.input_volume),
+        headphone_volume: read(layout.headphone_volume),
+        monitor_mix: read(layout.monitor_mix),
+        pickup: read(layout.pickup),
+        low_cut: flag(layout.low_cut),
+        mid_boost: flag(layout.mid_boost),
+        eq,
     })
-}
-
-pub fn parse_helper_hex_report(values: &[String]) -> Result<DeviceState, &'static str> {
-    let bytes = values
-        .iter()
-        .map(|value| u8::from_str_radix(value, 16).map_err(|_| "non-hex byte in helper report"))
-        .collect::<Result<Vec<_>, _>>()?;
-    parse_input_report(&bytes)
 }
 
 /// Matches AM8Pro.js sendAM9Eq(): 10 filters, little-endian fields, 256-byte report.
@@ -193,37 +200,34 @@ pub fn eq_report(channel: EqChannel, points: &[EqPoint]) -> Result<Vec<u8>, &'st
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::profile::by_id;
 
-    #[test]
-    fn simple_packet_matches_vendor_format() {
-        assert_eq!(
-            setting_report(Setting::NoiseSwitch, 1),
-            [0, 0xa5, 0x5a, 0xfe, 2, 2, 1, 0x16]
-        );
-        assert_eq!(
-            setting_report(Setting::Reset, 0),
-            [0, 0xa5, 0x5a, 0xfe, 1, 0x20, 0x16]
-        );
+    fn layout(id: &str) -> Layout {
+        by_id(id).unwrap().layout.unwrap()
     }
 
     #[test]
-    fn color_packet_matches_vendor_render() {
-        let packet = color_report([0x12, 0x34, 0x56]);
+    fn simple_packets_match_vendor_format() {
+        assert_eq!(setting_report(0x02, 1), [0, 0xa5, 0x5a, 0xfe, 2, 2, 1, 0x16]);
+        assert_eq!(reset_report(), [0, 0xa5, 0x5a, 0xfe, 1, 0x20, 0x16]);
+    }
+
+    #[test]
+    fn frame_packet_matches_vendor_render() {
+        let packet = frame_report(&[[0x12, 0x34, 0x56]; MAX_LEDS], 12);
         assert_eq!(packet.len(), 257);
         assert_eq!(&packet[..7], &[0, 0xa5, 0x5a, 0xfe, 0x26, 0x0b, 12]);
-        assert_eq!(&packet[7..10], &[0x12, 0x34, 0x56]);
         assert_eq!(&packet[40..43], &[0x12, 0x34, 0x56]);
         assert_eq!(packet[43], 0x16);
+        // A9: nine LEDs, as in Genie's A9S plugin (29, 0x0b, 9).
+        let packet = frame_report(&[[1, 2, 3]; MAX_LEDS], 9);
+        assert_eq!(&packet[..7], &[0, 0xa5, 0x5a, 0xfe, 29, 0x0b, 9]);
+        assert_eq!(packet[7 + 27], 0x16);
     }
 
     #[test]
     fn eq_packet_has_correct_channel_and_size() {
-        let points = [EqPoint {
-            filter_type: 1,
-            frequency_hz: 1000,
-            q: 1.0,
-            gain_db: -2.5,
-        }];
+        let points = [EqPoint { filter_type: 1, frequency_hz: 1000, q: 1.0, gain_db: -2.5 }];
         let packet = eq_report(EqChannel::Microphone, &points).unwrap();
         assert_eq!(packet.len(), 257);
         assert_eq!(&packet[..7], &[0, 0xa5, 0x5a, 0xfe, 0x66, 0x0a, 1]);
@@ -231,37 +235,78 @@ mod tests {
         assert_eq!(packet[107], 0x16);
     }
 
-    #[test]
-    fn parses_observed_report_without_leading_report_id() {
+    fn report() -> Vec<u8> {
         let mut report = vec![0; 256];
         report[..3].copy_from_slice(&[0xa5, 0x5a, 0xfe]);
-        report[3] = 0x72;
-        report[4] = 5;
-        report[5] = 1;
-        report[12] = 27;
-        report[13] = 27;
-        report[14] = 12;
-        report[16] = 1;
-        report[17..27].copy_from_slice(&[1, 0, 0, 0, 0xc8, 0, 0xd4, 2, 0, 0]);
-        let state = parse_input_report(&report).unwrap();
-        assert_eq!(state.channel, EqChannel::Microphone);
-        assert_eq!(state.configuration.light_pattern, 5);
-        assert!(state.configuration.mic_mute);
-        assert_eq!(state.configuration.input_volume, 27);
-        assert_eq!(state.eq_points.len(), 1);
-        assert_eq!(state.eq_points[0].frequency_hz, 200);
-        assert!((state.eq_points[0].q - 0.707).abs() < 0.001);
+        report[3] = 0x96;
+        report
     }
 
     #[test]
-    fn led_count_shifts_eq_and_light_switch() {
-        let mut report = vec![0; 256];
-        report[..3].copy_from_slice(&[0xa5, 0x5a, 0xfe]);
-        report[15] = 2;
-        report[22] = 0;
-        report[123] = 1;
-        let state = parse_input_report(&report).unwrap();
-        assert_eq!(state.channel, EqChannel::Output);
-        assert!(state.configuration.light_on);
+    fn parses_am8_pro_report() {
+        let mut bytes = report();
+        bytes[4] = 5;
+        bytes[5] = 1;
+        bytes[12] = 27;
+        bytes[14] = 12;
+        bytes[15] = 12; // LEDs
+        bytes[16 + 36] = 1; // microphone channel
+        bytes[53..63].copy_from_slice(&[1, 0, 0, 0, 0xc8, 0, 0xd4, 2, 0, 0]);
+        bytes[153] = 1; // light switch
+        let state = parse_input_report(&bytes, &layout("am8pro"), true).unwrap();
+        assert_eq!(state.light_pattern, Some(5));
+        assert_eq!(state.mic_mute, Some(true));
+        assert_eq!(state.input_volume, Some(27));
+        assert_eq!(state.monitor_mix, Some(12));
+        assert_eq!(state.light_on, Some(true));
+        assert_eq!(state.pickup, None);
+        let (channel, points) = state.eq.unwrap();
+        assert_eq!(channel, EqChannel::Microphone);
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].frequency_hz, 200);
+        assert!((points[0].q - 0.707).abs() < 0.001);
+    }
+
+    #[test]
+    fn led_count_shifts_everything_after_it() {
+        let mut bytes = report();
+        bytes[15] = 2;
+        bytes[123] = 1;
+        let state = parse_input_report(&bytes, &layout("am8pro"), true).unwrap();
+        assert_eq!(state.eq.unwrap().0, EqChannel::Output);
+        assert_eq!(state.light_on, Some(true));
+    }
+
+    #[test]
+    fn a9_reads_pickup_pattern_after_the_eq() {
+        let mut bytes = report();
+        bytes[13] = 9; // LEDs
+        bytes[10] = 3; // voice
+        let after_eq = 13 + 27 + 1 + 100;
+        bytes[after_eq + 1] = 1; // light switch
+        bytes[after_eq + 2] = 4; // omni
+        let state = parse_input_report(&bytes, &layout("a9"), true).unwrap();
+        assert_eq!(state.voice, Some(3));
+        assert_eq!(state.light_on, Some(true));
+        assert_eq!(state.pickup, Some(4));
+        assert_eq!(state.input_volume, None);
+    }
+
+    #[test]
+    fn legacy_am8_offsets_move_when_no_leds_are_reported() {
+        let mut bytes = report();
+        bytes[15] = 12;
+        bytes[154] = 2;
+        bytes[161] = 7;
+        let state = parse_input_report(&bytes, &layout("am8"), true).unwrap();
+        assert_eq!(state.noise, Some(2));
+        assert_eq!(state.monitor_mix, Some(7));
+
+        let mut bytes = report();
+        bytes[154 - 36] = 3;
+        bytes[160 - 36] = 1;
+        let state = parse_input_report(&bytes, &layout("am8"), true).unwrap();
+        assert_eq!(state.noise, Some(3));
+        assert_eq!(state.low_cut, Some(true));
     }
 }

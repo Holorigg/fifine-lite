@@ -1,5 +1,10 @@
 fn main() {
-    let config = slint_build::CompilerConfiguration::new().with_style("fluent-dark".into());
+    // English is the source language; lang/ru holds the Russian catalogue.
+    println!("cargo:rerun-if-changed=lang");
+    let config = slint_build::CompilerConfiguration::new()
+        .with_style("fluent-dark".into())
+        .with_default_translation_context(slint_build::DefaultTranslationContext::None)
+        .with_bundled_translations("lang");
     slint_build::compile_with_config("ui/app.slint", config).expect("compile Slint UI");
 
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {

@@ -1,5 +1,14 @@
 use crate::eq::{Presets, import_genie_json};
+use crate::i18n::tr;
 use crate::protocol::{EqChannel, EqPoint, eq_report};
+
+fn out_of_range() -> String {
+    tr("The value is outside the supported range", "Значение вне допустимого диапазона").to_owned()
+}
+
+fn no_point() -> &'static str {
+    tr("No point is selected", "Точка не выбрана")
+}
 
 #[derive(Default)]
 struct ChannelState {
@@ -53,6 +62,13 @@ impl EqEditor {
         false
     }
 
+    /// Forgets what was read from the microphone, so the next state report is taken as
+    /// the new starting point (after a factory reset or a reconnect).
+    pub fn forget_device(&mut self) {
+        self.channels = [ChannelState::default(), ChannelState::default()];
+        self.selected = None;
+    }
+
     pub fn loaded(&self) -> bool {
         self.active().device_default.is_some()
     }
@@ -77,16 +93,16 @@ impl EqEditor {
             self.active()
                 .device_default
                 .clone()
-                .ok_or("Device Default ещё не прочитан")?
+                .ok_or(tr("The microphone's own EQ has not been read yet", "Эквалайзер микрофона ещё не прочитан"))?
         } else if index == custom {
             self.active()
                 .custom
                 .clone()
-                .ok_or("Сначала измените одну из точек EQ")?
+                .ok_or(tr("Change a point first: there is no custom curve yet", "Сначала измените одну из точек: своей кривой пока нет"))?
         } else {
             self.presets.points(self.channel, index)?
         };
-        eq_report(self.channel, &points).map_err(str::to_owned)?;
+        eq_report(self.channel, &points).map_err(|_| out_of_range())?;
         let state = self.active_mut();
         state.current = points;
         state.preset_index = index;
@@ -105,11 +121,11 @@ impl EqEditor {
 
     fn edit(&mut self, update: impl FnOnce(&mut Vec<EqPoint>)) -> Result<(), String> {
         if self.locked {
-            return Err("Сначала снимите замок EQ".to_owned());
+            return Err(tr("Unlock the equalizer first", "Сначала снимите блокировку эквалайзера").to_owned());
         }
         let mut next = self.points().to_vec();
         update(&mut next);
-        eq_report(self.channel, &next).map_err(str::to_owned)?;
+        eq_report(self.channel, &next).map_err(|_| out_of_range())?;
         let custom = self.presets.custom_index(self.channel);
         let state = self.active_mut();
         state.custom = Some(next.clone());
@@ -119,27 +135,27 @@ impl EqEditor {
     }
 
     pub fn edit_frequency(&mut self, frequency: u16) -> Result<(), String> {
-        let index = self.selected.ok_or("Точка EQ не выбрана")?;
+        let index = self.selected.ok_or(no_point())?;
         self.edit(|points| points[index].frequency_hz = frequency)
     }
 
     pub fn edit_q(&mut self, q: f32) -> Result<(), String> {
-        let index = self.selected.ok_or("Точка EQ не выбрана")?;
+        let index = self.selected.ok_or(no_point())?;
         self.edit(|points| points[index].q = q)
     }
 
     pub fn edit_gain(&mut self, gain: f32) -> Result<(), String> {
-        let index = self.selected.ok_or("Точка EQ не выбрана")?;
+        let index = self.selected.ok_or(no_point())?;
         self.edit(|points| points[index].gain_db = gain)
     }
 
     pub fn edit_filter(&mut self, filter_type: u16) -> Result<(), String> {
-        let index = self.selected.ok_or("Точка EQ не выбрана")?;
+        let index = self.selected.ok_or(no_point())?;
         self.edit(|points| points[index].filter_type = filter_type)
     }
 
     pub fn move_selected(&mut self, frequency: u16, gain: f32) -> Result<(), String> {
-        let index = self.selected.ok_or("Точка EQ не выбрана")?;
+        let index = self.selected.ok_or(no_point())?;
         self.edit(|points| {
             points[index].frequency_hz = frequency;
             points[index].gain_db = gain;
@@ -148,7 +164,7 @@ impl EqEditor {
 
     pub fn add_band(&mut self) -> Result<(), String> {
         if self.points().len() >= 10 {
-            return Err("Максимум 10 точек EQ".to_owned());
+            return Err(tr("The equalizer has at most 10 points", "В эквалайзере не больше 10 точек").to_owned());
         }
         let next_index = self.points().len();
         self.edit(|points| {
@@ -164,7 +180,7 @@ impl EqEditor {
     }
 
     pub fn remove_selected(&mut self) -> Result<(), String> {
-        let index = self.selected.ok_or("Точка EQ не выбрана")?;
+        let index = self.selected.ok_or(no_point())?;
         self.edit(|points| {
             points.remove(index);
         })?;

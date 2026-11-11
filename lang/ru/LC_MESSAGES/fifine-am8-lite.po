@@ -1,0 +1,324 @@
+msgid ""
+msgstr ""
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "Animations"
+msgstr "Анимации"
+
+msgid "Ask"
+msgstr "Спрашивать"
+
+msgid "Bell"
+msgstr "Колокол"
+
+msgid "Bidirectional"
+msgstr "Восьмёрка"
+
+msgid "Breathing"
+msgstr "Дыхание"
+
+msgid "Brightness"
+msgstr "Яркость"
+
+msgid "Built-in"
+msgstr "Встроенная"
+
+msgid "Built-in effects have no names.\nTurn one on, look at the ring and label it."
+msgstr "У встроенных эффектов нет названий.\nВключите эффект, посмотрите на кольцо и подпишите его."
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "Cardioid"
+msgstr "Кардиоида"
+
+msgid "Child"
+msgstr "Ребёнок"
+
+msgid "Collapse sidebar"
+msgstr "Свернуть панель"
+
+msgid "Colour"
+msgstr "Цвет"
+
+msgid "Connected"
+msgstr "Подключён"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Editing"
+msgstr "Редактирование"
+
+msgid "Effects"
+msgstr "Эффекты"
+
+msgid "Effects are built into the microphone.\nCustom colours and animations come from the computer: keep the app running, it can sit in the tray."
+msgstr "Эффекты встроены в микрофон.\nСвой цвет и анимации идут с компьютера: программа должна быть запущена, её можно свернуть в трей."
+
+msgid "Equalizer"
+msgstr "Эквалайзер"
+
+msgid "Expand sidebar"
+msgstr "Развернуть панель"
+
+msgid "Export"
+msgstr "Экспорт"
+
+msgid "Female"
+msgstr "Женский"
+
+msgid "Fill all"
+msgstr "Залить всё"
+
+msgid "Filter type"
+msgstr "Тип фильтра"
+
+msgid "Frequency, Hz"
+msgstr "Частота, Гц"
+
+msgid "Gain, dB"
+msgstr "Усиление, дБ"
+
+msgid "Gradient"
+msgstr "Градиент"
+
+msgid "HEADPHONES"
+msgstr "НАУШНИКИ"
+
+msgid "Headphones"
+msgstr "Наушники"
+
+msgid "High"
+msgstr "Сильное"
+
+msgid "High shelf"
+msgstr "Высокая полка"
+
+msgid "High-pass"
+msgstr "Срез низких"
+
+msgid "Hue"
+msgstr "Оттенок"
+
+msgid "Import"
+msgstr "Импорт"
+
+msgid "Language"
+msgstr "Язык"
+
+msgid "Lighting"
+msgstr "Подсветка"
+
+msgid "Locked"
+msgstr "Заблокировано"
+
+msgid "Low"
+msgstr "Слабое"
+
+msgid "Low cut"
+msgstr "Срез низких частот"
+
+msgid "Low shelf"
+msgstr "Низкая полка"
+
+msgid "Low-pass"
+msgstr "Срез высоких"
+
+msgid "MICROPHONE"
+msgstr "МИКРОФОН"
+
+msgid "MONITORING"
+msgstr "МОНИТОРИНГ"
+
+msgid "Male"
+msgstr "Мужской"
+
+msgid "Medium"
+msgstr "Среднее"
+
+msgid "Megaphone"
+msgstr "Мегафон"
+
+msgid "Microphone"
+msgstr "Микрофон"
+
+msgid "Microphone factory settings"
+msgstr "Заводские настройки микрофона"
+
+msgid "Microphone muted"
+msgstr "Микрофон выключен"
+
+msgid "Microphone on"
+msgstr "Микрофон включён"
+
+msgid "Microphone: how others hear your voice.\nHeadphones: only what you hear."
+msgstr "Микрофон — как ваш голос слышат другие.\nНаушники — только то, что слышите вы."
+
+msgid "Mid boost"
+msgstr "Подъём середины"
+
+msgid "Minimize to tray"
+msgstr "Свернуть в трей"
+
+msgid "Minimize to tray or quit?"
+msgstr "Свернуть в трей или выйти?"
+
+msgid "Mixer"
+msgstr "Микшер"
+
+msgid "Monster"
+msgstr "Монстр"
+
+msgid "Name of effect {}"
+msgstr "Название эффекта {}"
+
+msgid "No. {}"
+msgstr "№ {}"
+
+msgid "Noise suppression"
+msgstr "Шумоподавление"
+
+msgid "None"
+msgstr "Без эффекта"
+
+msgid "Not connected"
+msgstr "Нет связи"
+
+msgid "Notch"
+msgstr "Режектор"
+
+msgid "Off"
+msgstr "Выкл"
+
+msgid "Old man"
+msgstr "Старик"
+
+msgid "Omnidirectional"
+msgstr "Круговая"
+
+msgid "One colour"
+msgstr "Один цвет"
+
+msgid "PICKUP PATTERN"
+msgstr "НАПРАВЛЕННОСТЬ"
+
+msgid "POINT"
+msgstr "ТОЧКА"
+
+msgid "Per LED"
+msgstr "По светодиодам"
+
+msgid "Pick a colour and click the dots of the ring."
+msgstr "Выберите цвет и нажимайте на точки кольца."
+
+msgid "Point"
+msgstr "Точка"
+
+msgid "Q factor"
+msgstr "Добротность Q"
+
+msgid "Quit"
+msgstr "Выйти"
+
+msgid "Quit the app"
+msgstr "Закрывать программу"
+
+msgid "Rainbow"
+msgstr "Радуга"
+
+msgid "Remember my choice"
+msgstr "Запомнить выбор"
+
+msgid "Reset"
+msgstr "Сбросить"
+
+msgid "Reset the microphone to factory settings?"
+msgstr "Сбросить микрофон к заводским настройкам?"
+
+msgid "Reset…"
+msgstr "Сбросить…"
+
+msgid "Restore the curve of the selected preset."
+msgstr "Вернуть кривую выбранного пресета."
+
+msgid "Robot"
+msgstr "Робот"
+
+msgid "Same as Windows"
+msgstr "Как в Windows"
+
+msgid "Saturation"
+msgstr "Насыщенность"
+
+msgid "Second colour"
+msgstr "Второй цвет"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Speed"
+msgstr "Скорость"
+
+msgid "Start with Windows"
+msgstr "Запускать вместе с Windows"
+
+msgid "Stereo"
+msgstr "Стерео"
+
+msgid "Support for this model is based on fifine Genie data and has not been tested on the microphone itself."
+msgstr "Поддержка этой модели собрана по данным fifine Genie и не проверена на самом микрофоне."
+
+msgid "The app starts minimized to the tray."
+msgstr "Программа стартует свёрнутой в трей."
+
+msgid "The lighting animation stops when the app quits."
+msgstr "После выхода анимация подсветки остановится."
+
+msgid "The lock protects the curve from accidental edits and closes again after 5 minutes."
+msgstr "Замок бережёт кривую от случайных правок и сам закрывается через 5 минут."
+
+msgid "The louder you speak, the more LEDs light up.\nWindows shows the microphone as in use meanwhile."
+msgstr "Чем громче голос, тем больше светодиодов горит.\nWindows при этом показывает, что микрофон используется."
+
+msgid "The ring slowly fades in and out."
+msgstr "Кольцо плавно разгорается и гаснет."
+
+msgid "The whole spectrum runs around the ring."
+msgstr "По кольцу бежит весь спектр."
+
+msgid "This model switches its built-in effects with the button on the microphone."
+msgstr "Эффекты этой модели переключаются кнопкой на самом микрофоне."
+
+msgid "Two colours flow into each other around the ring."
+msgstr "Два цвета перетекают друг в друга по кругу."
+
+msgid "VOICE EFFECT"
+msgstr "ЭФФЕКТ ГОЛОСА"
+
+msgid "Voice"
+msgstr "Голос"
+
+msgid "Voice level"
+msgstr "Уровень голоса"
+
+msgid "Volume, lighting, effects and the equalizer return to their defaults."
+msgstr "Громкость, подсветка, эффекты и эквалайзер вернутся к значениям по умолчанию."
+
+msgid "Volume, lighting, effects and the equalizer return to their defaults. This cannot be undone."
+msgstr "Громкость, подсветка, эффекты и эквалайзер вернутся к значениям по умолчанию. Отменить это нельзя."
+
+msgid "When the window is closed"
+msgstr "При закрытии окна"
+
+msgid "{} dB"
+msgstr "{} дБ"
+
+msgid "−∞ dB"
+msgstr "−∞ дБ"
+msgid "Hide in the tray"
+msgstr "Сворачивать в трей"

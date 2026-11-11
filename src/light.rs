@@ -1,9 +1,19 @@
-//! Custom lighting for the 12-LED ring: static colours, per-LED colours and animations.
+//! Custom lighting for the LED ring: static colours, per-LED colours and animations.
 //! Frames are computed on the writer thread and streamed to the microphone.
-use crate::protocol::LED_COUNT;
+use crate::profile::MAX_LEDS;
+use std::sync::OnceLock;
+use std::time::Instant;
+
+/// Seconds since the first call. The device thread and the on-screen preview share it,
+/// so both show the same phase of an animation.
+pub fn clock() -> f32 {
+    static START: OnceLock<Instant> = OnceLock::new();
+    START.get_or_init(Instant::now).elapsed().as_secs_f32()
+}
 
 pub type Rgb = [u8; 3];
-pub type Frame = [Rgb; LED_COUNT];
+/// Colours for a ring of up to `MAX_LEDS`; shorter rings use the first entries.
+pub type Frame = [Rgb; MAX_LEDS];
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum LightMode {
@@ -24,28 +34,43 @@ impl LightMode {
         matches!(self, LightMode::Voice { .. })
     }
 
-    /// Frame at `t` seconds; `level` is the microphone peak 0–1.
-    pub fn frame(&self, t: f32, level: f32) -> Frame {
+    /// True when the frame changes over time and has to be streamed.
+    pub fn animated(&self) -> bool {
+        !matches!(self, LightMode::Static(_))
+    }
+
+    /// A still frame to leave on the ring when the animation can no longer run.
+    pub fn rest_frame(&self, leds: usize) -> Frame {
+        match *self {
+            LightMode::Static(frame) => frame,
+            LightMode::Breath { color, .. } | LightMode::Voice { color } => [color; MAX_LEDS],
+            LightMode::Rainbow { .. } | LightMode::Gradient { .. } => self.frame(0.0, 0.0, leds),
+        }
+    }
+
+    /// Frame at `t` seconds for a ring of `leds`; `level` is the microphone peak 0–1.
+    pub fn frame(&self, t: f32, level: f32, leds: usize) -> Frame {
+        let ring = leds.clamp(1, MAX_LEDS) as f32;
         match *self {
             LightMode::Static(frame) => frame,
             LightMode::Breath { color, speed } => {
                 let phase = (t * speed / 3.0) * std::f32::consts::TAU;
                 let brightness = 0.12 + 0.88 * (0.5 - 0.5 * phase.cos());
-                [scale(color, brightness); LED_COUNT]
+                [scale(color, brightness); MAX_LEDS]
             }
             LightMode::Rainbow { speed } => {
-                std::array::from_fn(|i| hsv_to_rgb([(i as f32 / LED_COUNT as f32 + t * speed * 0.15) * 360.0, 1.0, 1.0]))
+                std::array::from_fn(|i| hsv_to_rgb([(i as f32 / ring + t * speed * 0.15) * 360.0, 1.0, 1.0]))
             }
             LightMode::Gradient { from, to, speed } => std::array::from_fn(|i| {
-                let pos = (i as f32 / LED_COUNT as f32 + t * speed * 0.1).rem_euclid(1.0);
+                let pos = (i as f32 / ring + t * speed * 0.1).rem_euclid(1.0);
                 // Triangle wave so the ring loops without a seam.
                 let k = 1.0 - (pos * 2.0 - 1.0).abs();
                 mix(from, to, k)
             }),
             LightMode::Voice { color } => {
-                // Map -50..-6 dBFS to 0..12 LEDs; the last lit LED is partially bright.
+                // Map -50..-6 dBFS to the whole ring; the last lit LED is partially bright.
                 let db = if level <= 0.0001 { -60.0 } else { 20.0 * level.log10() };
-                let lit = ((db + 50.0) / 44.0).clamp(0.0, 1.0) * LED_COUNT as f32;
+                let lit = ((db + 50.0) / 44.0).clamp(0.0, 1.0) * ring;
                 std::array::from_fn(|i| {
                     let fill = (lit - i as f32).clamp(0.0, 1.0);
                     scale(color, 0.06 + 0.94 * fill)
@@ -99,8 +124,8 @@ mod tests {
     #[test]
     fn voice_ring_fills_with_level() {
         let mode = LightMode::Voice { color: [255, 0, 0] };
-        let silent = mode.frame(0.0, 0.0);
-        let loud = mode.frame(0.0, 1.0);
+        let silent = mode.frame(0.0, 0.0, 12);
+        let loud = mode.frame(0.0, 1.0, 12);
         assert!(silent.iter().all(|led| led[0] < 20));
         assert!(loud.iter().all(|led| led[0] == 255));
     }
@@ -109,7 +134,7 @@ mod tests {
     fn breath_stays_within_colour() {
         let mode = LightMode::Breath { color: [200, 100, 50], speed: 1.0 };
         for step in 0..30 {
-            let frame = mode.frame(step as f32 * 0.1, 0.0);
+            let frame = mode.frame(step as f32 * 0.1, 0.0, 12);
             assert!(frame[0][0] <= 200 && frame[0][1] <= 100);
         }
     }

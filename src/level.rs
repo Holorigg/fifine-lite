@@ -4,7 +4,7 @@
 //! voice-reactive light), because Windows shows "microphone in use" while it is open.
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{
-    Arc,
+    Arc, Mutex,
     atomic::{AtomicBool, AtomicU32, Ordering},
 };
 use std::thread;
@@ -23,6 +23,8 @@ pub struct LevelMonitor {
     peak: Arc<AtomicU32>,
     wanted: Arc<[AtomicBool; 2]>,
     active: Arc<AtomicBool>,
+    /// Model name to look for among the Windows recording devices, e.g. "AM8 Pro".
+    model: Arc<Mutex<String>>,
 }
 
 impl LevelMonitor {
@@ -31,6 +33,7 @@ impl LevelMonitor {
             peak: Arc::new(AtomicU32::new(0f32.to_bits())),
             wanted: Arc::new([AtomicBool::new(false), AtomicBool::new(false)]),
             active: Arc::new(AtomicBool::new(false)),
+            model: Arc::new(Mutex::new(String::new())),
         };
         let worker = monitor.clone();
         thread::Builder::new()
@@ -42,6 +45,11 @@ impl LevelMonitor {
 
     pub fn set_wanted(&self, consumer: Consumer, wanted: bool) {
         self.wanted[consumer as usize].store(wanted, Ordering::Relaxed);
+    }
+
+    /// Chooses which microphone to listen to (takes effect the next time capture opens).
+    pub fn set_model(&self, name: &str) {
+        *self.model.lock().unwrap() = name.to_owned();
     }
 
     /// Linear peak 0–1.
@@ -88,12 +96,18 @@ impl LevelMonitor {
 
     fn open_stream(&self) -> Result<cpal::Stream, String> {
         let host = cpal::default_host();
-        let device = host
-            .input_devices()
-            .map_err(|e| e.to_string())?
-            .find(|device| device.to_string().contains("AM8"))
+        let model = self.model.lock().unwrap().clone();
+        let named = |needle: &str| {
+            let needle = needle.to_lowercase();
+            host.input_devices().ok()?.find(|device| device.to_string().to_lowercase().contains(&needle))
+        };
+        // The selected model first, then any fifine microphone, then whatever Windows uses.
+        let device = (!model.is_empty())
+            .then(|| named(&format!("fifine {model}")))
+            .flatten()
+            .or_else(|| named("fifine"))
             .or_else(|| host.default_input_device())
-            .ok_or("нет устройства ввода")?;
+            .ok_or("no input device")?;
         let supported = device.default_input_config().map_err(|e| e.to_string())?;
         let config = supported.config();
         let peak = self.peak.clone();
@@ -124,7 +138,7 @@ impl LevelMonitor {
                 on_error,
                 None,
             ),
-            other => return Err(format!("формат {other:?} не поддержан")),
+            other => return Err(format!("sample format {other:?} is not supported")),
         }
         .map_err(|e| e.to_string())?;
         stream.play().map_err(|e| e.to_string())?;

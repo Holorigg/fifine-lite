@@ -1,3 +1,4 @@
+use crate::i18n::tr;
 use crate::protocol::{EqChannel, EqPoint};
 use serde::{Deserialize, Serialize};
 
@@ -79,12 +80,12 @@ impl Presets {
             .enumerate()
             .map(|(index, preset)| {
                 if index == 0 {
-                    "Device Default".to_owned()
+                    tr("From the microphone", "Из микрофона").to_owned()
                 } else {
                     preset.label.clone()
                 }
             })
-            .chain(std::iter::once("Custom".to_owned()))
+            .chain(std::iter::once(tr("Custom", "Своя кривая").to_owned()))
             .collect()
     }
 
@@ -111,12 +112,17 @@ impl Presets {
 }
 
 pub fn import_genie_json(text: &str) -> Result<Vec<EqPoint>, String> {
-    let data: Vec<GeniePoint> = serde_json::from_str(text).map_err(|e| e.to_string())?;
+    let bad_file = || tr("This is not an equalizer file", "Это не файл эквалайзера").to_owned();
+    let data: Vec<GeniePoint> = serde_json::from_str(text).map_err(|_| bad_file())?;
     if data.len() > 10 {
-        return Err("EQ supports at most 10 points".to_owned());
+        return Err(tr("The equalizer has at most 10 points", "В эквалайзере не больше 10 точек").to_owned());
     }
     data.into_iter()
-        .map(|point| EqPoint::try_from(point).map_err(str::to_owned))
+        .map(|point| {
+            EqPoint::try_from(point).map_err(|_| {
+                tr("The file has a point outside the supported range", "В файле есть точка вне допустимого диапазона").to_owned()
+            })
+        })
         .collect()
 }
 

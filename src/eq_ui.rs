@@ -3,6 +3,7 @@ use fifine_am8_lite::{
     device::WriteCommand,
     editor::EqEditor,
     eq::{curve_path, export_genie_json},
+    i18n::tr,
     protocol::{EqChannel, EqPoint},
 };
 use slint::{ComponentHandle, ModelRc, SharedString, Timer, TimerMode, VecModel, Weak};
@@ -12,12 +13,20 @@ use std::{
     time::Duration,
 };
 
-const FILTERS: [u16; 5] = [0, 1, 2, 4, 5];
+/// Device filter codes in the order of the "filter type" list: bell, low shelf,
+/// high shelf, high-pass, low-pass, notch (Genie's numbering; 5 is unused).
+const FILTERS: [u16; 6] = [0, 1, 2, 4, 3, 6];
+
+/// Cut and notch filters have no gain; their handle sits on the 0 dB line.
+fn has_gain(filter_type: u16) -> bool {
+    !matches!(filter_type, 3 | 4 | 6)
+}
 
 fn position(point: &EqPoint) -> (f32, f32) {
+    let gain = if has_gain(point.filter_type) { point.gain_db } else { 0.0 };
     (
         (f32::from(point.frequency_hz).max(20.0) / 20.0).log10() / 3.0,
-        (12.0 - point.gain_db) / 24.0,
+        (12.0 - gain) / 24.0,
     )
 }
 
@@ -178,8 +187,11 @@ pub fn wire(ui: &AppWindow, editor: Arc<Mutex<EqEditor>>, writer: Sender<WriteCo
         }
         state.edit(|editor| {
             let frequency = (20.0 * 1000f32.powf(x.clamp(0.0, 1.0))).round() as u16;
-            let gain = ((12.0 - 24.0 * y.clamp(0.0, 1.0)) * 10.0).round() / 10.0;
-            editor.move_selected(frequency, gain)
+            let gain = match editor.selected_point() {
+                Some(point) if !has_gain(point.filter_type) => point.gain_db,
+                _ => ((12.0 - 24.0 * y.clamp(0.0, 1.0)) * 10.0).round() / 10.0,
+            };
+            editor.move_selected(frequency.clamp(20, 20_000), gain)
         });
     });
     let state = controls.clone();
@@ -196,12 +208,12 @@ pub fn wire(ui: &AppWindow, editor: Arc<Mutex<EqEditor>>, writer: Sender<WriteCo
     ui.on_eq_field_changed(move |field, value| {
         let value = value.trim().replace(',', ".");
         state.edit(|editor| {
-            let invalid = |_| "Введите число в допустимом диапазоне".to_owned();
+            let invalid = |_| tr("Enter a number within the allowed range", "Введите число в допустимом диапазоне").to_owned();
             match field.as_str() {
                 "frequency" => editor.edit_frequency(
                     value
                         .parse()
-                        .map_err(|_| "Введите частоту от 20 до 20000 Гц")?,
+                        .map_err(|_| tr("Enter a frequency from 20 to 20000 Hz", "Введите частоту от 20 до 20000 Гц"))?,
                 ),
                 "gain" => editor.edit_gain(value.parse().map_err(invalid)?),
                 "q" => editor.edit_q(value.parse().map_err(invalid)?),
@@ -211,7 +223,7 @@ pub fn wire(ui: &AppWindow, editor: Arc<Mutex<EqEditor>>, writer: Sender<WriteCo
     });
     let state = controls.clone();
     ui.on_eq_filter_changed(move |index| {
-        if let Some(&filter) = FILTERS.get(index as usize) {
+        if let Some(&filter) = usize::try_from(index).ok().and_then(|index| FILTERS.get(index)) {
             state.edit(|editor| editor.edit_filter(filter))
         }
     });

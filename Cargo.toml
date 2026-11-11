@@ -1,7 +1,11 @@
 [package]
 name = "fifine-am8-lite"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2024"
+description = "Lightweight control app for fifine USB microphones"
+license-file = "LICENSE"
+repository = "https://github.com/Holorigg/fifine-am8-lite"
+publish = false
 
 [dependencies]
 cpal = "0.18.2"
@@ -12,7 +16,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 slint = { version = "1.18", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg", "raw-window-handle-06"] }
 tray-icon = { version = "0.26.1", default-features = false }
-tungstenite = "0.28"
 winreg = "0.56.0"
 
 [build-dependencies]
@@ -20,4 +23,4 @@ slint-build = "1.18"
 winresource = "0.1"
 
 [target."cfg(windows)".dependencies]
-windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_System_Threading", "Win32_Security"] }
+windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_System_Threading", "Win32_Security", "Win32_Globalization"] }
