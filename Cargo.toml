@@ -1,6 +1,6 @@
 [package]
 name = "fifine-lite"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 description = "Lightweight control app for fifine USB microphones"
 license = "GPL-3.0-only"
