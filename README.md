@@ -126,5 +126,5 @@ You may use, study, change and share the app, including for money. Anything you
 distribute that is built on this code must also be released under GPL v3 with its full
 source code.
 
-The microphone picture and the equalizer presets come from fifine Genie and belong to
+The microphone pictures and the equalizer presets come from fifine Genie and belong to
 fifine; they are not covered by the GPL. "fifine" is a trademark of its owner.

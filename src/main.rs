@@ -161,7 +161,7 @@ impl App {
         let (codes, layout) = (&profile.codes, profile.layout.as_ref());
         ui.set_device_name(profile.name.into());
         ui.set_experimental(!profile.verified);
-        ui.set_has_image(profile.id == "am8pro");
+        ui.set_model_id(profile.id.into());
         ui.set_has_light_switch(codes.light_switch.is_some());
         ui.set_has_custom_light(profile.leds > 0);
         ui.set_pattern_count(i32::from(profile.patterns));

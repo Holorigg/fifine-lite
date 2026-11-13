@@ -954,7 +954,15 @@ export component AppWindow inherits Window {
     in-out property <int> device-index: 0;
     // Support for this model has not been checked on real hardware.
     in property <bool> experimental: false;
-    in property <bool> has-image: false;
+    // Profile id of the model; picks its picture.
+    in property <string> model-id;
+    property <image> model-image: root.model-id == "am8pro" ? @image-url("images/genie/am8pro.png")
+        : root.model-id == "am9" ? @image-url("images/genie/am9.png")
+        : root.model-id == "a9" ? @image-url("images/genie/a9.png")
+        : root.model-id == "am8" ? @image-url("images/genie/am8.png")
+        : root.model-id == "am68" ? @image-url("images/genie/am68.png")
+        : @image-url("");
+    property <bool> has-image: root.model-image.width > 0;
     in property <bool> has-light-switch: false;
     in property <bool> has-custom-light: false;
     in property <int> pattern-count: 0;
@@ -1224,12 +1232,13 @@ export component AppWindow inherits Window {
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                 }
+                                // Small pictures are not stretched beyond their own size.
                                 if root.has-image : Image {
+                                    width: Math.min(parent.width - 32px, root.model-image.width * 1px);
+                                    height: Math.min(parent.height - 16px, root.model-image.height * 1px);
                                     x: (parent.width - self.width) / 2;
-                                    y: 8px;
-                                    width: parent.width - 32px;
-                                    height: parent.height - 16px;
-                                    source: @image-url("images/genie/am8pro.png");
+                                    y: (parent.height - self.height) / 2;
+                                    source: root.model-image;
                                     image-fit: contain;
                                     opacity: root.device-ready ? 1 : 0.35;
                                 }
